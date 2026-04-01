@@ -512,15 +512,22 @@
                 const angle = (h - 12) * 15; 
                 const isHorizon = (h === 6 || h === 18); // 最左與最右 (日出與日落)
                 
-                // 短橫線在旋轉前需為直向 (w-2 h-8)，旋轉90度後即變為指向圓心的短橫線
-                const styleClass = isHorizon ? 'w-[2px] h-[8px] rounded-[1px] opacity-70' : 'w-[4px] h-[4px] rounded-full opacity-40';
-                const marginTop = isHorizon ? '5px' : '7px'; // 微調使其中心對齊並緊貼內緣
-                
-                html += `
-                    <div class="absolute inset-0 flex justify-center" style="transform: rotate(${angle}deg);">
-                        <div class="${styleClass}" style="background-color: ${color}; margin-top: ${marginTop};"></div>
-                    </div>
-                `;
+                if (isHorizon) {
+                    // 將短線起點對齊雙線軌道隙縫 (margin-top: 1px)，並向圓心內側延伸，保持軌道外部圓滑無突起
+                    html += `
+                        <div class="absolute inset-0 flex justify-center" style="transform: rotate(${angle}deg);">
+                            <div class="w-[2px] h-[7px] rounded-[1px] opacity-80" style="background-color: ${color}; margin-top: 1px;"></div>
+                        </div>
+                    `;
+                } else {
+                    // 其餘 22 個小圓點，精準嵌在 border-[4px] border-double 的雙線縫隙中間
+                    // (4px 雙線邊框通常包含 1px外框 + 2px留白 + 1px內框，因此高寬 2px、往下推 1px 剛好填滿留白)
+                    html += `
+                        <div class="absolute inset-0 flex justify-center" style="transform: rotate(${angle}deg);">
+                            <div class="w-[2px] h-[2px] rounded-full opacity-100" style="background-color: ${color}; margin-top: 1px;"></div>
+                        </div>
+                    `;
+                }
             }
             html += '</div>';
             return html;
