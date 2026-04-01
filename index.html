@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>古埃及皇家日曆 (Civil Calendar)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 核心晝夜與珠寶色彩系統 (CSS Variables) */
+        :root {
+            --papyrus: #E9DCC9;
+            --ink-black: #1A1A1A;
+            --ink-red: #A32020;
+            --sacred-green: #3A6B44;
+            --card-bg: #EFE4CF;
+            --card-today: #F2E8D5;
+            --border-color: #9ca3af;
+            --text-main: #374151;
+            --text-muted: #6b7280;
+            --header-bg: #D5C4A1;
+            --slider-bg: #E5D5B5;
+            --shadow-color: rgba(0,0,0,0.1);
+
+            /* 皇家珠寶配色 (Light Mode) */
+            --lapis-blue: #192A56;      
+            --malachite-green: #16A085; 
+            --carnelian-red: #C0392B;   
+            --track-base-bg: #6b5c43;   
+        }
+
+        body.dark-mode {
+            --papyrus: #1a1e24;
+            --ink-black: #E9DCC9;
+            --ink-red: #ef4444; 
+            --sacred-green: #4ade80; 
+            --card-bg: #262c35;
+            --card-today: #323a46;
+            --border-color: #4b5563;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --header-bg: #111827;
+            --slider-bg: #1f2937;
+            --shadow-color: rgba(0,0,0,0.5);
+
+            --lapis-blue: #4A69BD;
+            --malachite-green: #1DD1A1;
+            --carnelian-red: #FF6B6B;
+            --track-base-bg: #F5D061;   
+        }
+
+        body {
+            background-color: var(--papyrus);
+            color: var(--ink-black);
+            font-family: 'Noto Serif TC', serif;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.05' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.10'/%3E%3C/svg%3E");
+            margin: 0;
+            overflow: hidden; 
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        .hieroglyph {
+            font-family: 'Noto Sans Egyptian Hieroglyphs', sans-serif;
+            font-weight: normal;
+            line-height: 1.2;
+        }
+
+        .scroll-container::-webkit-scrollbar { display: none; }
+        .scroll-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            scroll-behavior: auto; 
+            scroll-snap-type: x mandatory;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: var(--border-color);
+            border-radius: 4px;
+        }
+
+        /* --------------------------------------------------------
+           流體排版系統 (Fluid Typography & Sizing)
+        -------------------------------------------------------- */
+        .fluid-card {
+            width: clamp(240px, 75vw, 400px);
+            height: clamp(340px, 65vh, 560px);
+        }
+        .fluid-circle-outer {
+            width: clamp(110px, 28vh, 190px);
+            height: clamp(110px, 28vh, 190px);
+            max-width: 48vw;
+            max-height: 48vw;
+        }
+        .fluid-circle-inner {
+            width: clamp(85px, 22vh, 150px);
+            height: clamp(85px, 22vh, 150px);
+            max-width: 38vw;
+            max-height: 38vw;
+        }
+        .fluid-h-xl { font-size: clamp(1.4rem, 3.5vh, 2.2rem); }
+        .fluid-h-lg { font-size: clamp(1.1rem, 2.5vh, 1.6rem); }
+        .fluid-h-boat { font-size: clamp(1rem, 2.5vh, 1.5rem); }
+        .fluid-h-num { font-size: clamp(1.5rem, 4.5vh, 3.2rem); }
+        .fluid-text-lg { font-size: clamp(0.9rem, 2.2vh, 1.15rem); }
+        .fluid-text-base { font-size: clamp(0.8rem, 1.8vh, 0.95rem); }
+        .fluid-text-sm { font-size: clamp(0.65rem, 1.6vh, 0.8rem); }
+        .fluid-text-xs { font-size: clamp(0.55rem, 1.3vh, 0.7rem); }
+        .fluid-spacing { padding: clamp(0.75rem, 2.5vh, 1.5rem); }
+
+        /* --- 抽屜與彈出面板的極致自適應縮放 (確保免捲動) --- */
+        .fluid-modal-p { padding: clamp(1rem, 3vh, 1.5rem); }
+        .fluid-h-mega { font-size: clamp(2.5rem, 8vh, 4rem); margin-bottom: clamp(0.2rem, 1vh, 0.5rem); }
+        .fluid-title-lg { font-size: clamp(1.1rem, 3.5vh, 1.5rem); }
+        .fluid-subtitle { font-size: clamp(0.7rem, 2vh, 0.9rem); }
+        .fluid-desc { font-size: clamp(0.65rem, 2vh, 0.9rem); line-height: 1.6; }
+        
+        .panel-h-icon { font-size: clamp(1.8rem, 5vh, 2.5rem); margin-bottom: 0; }
+        .panel-title { font-size: clamp(0.85rem, 2.5vh, 1.1rem); }
+        .panel-desc { font-size: clamp(0.55rem, 1.8vh, 0.8rem); line-height: 1.5; }
+        .panel-gap { gap: clamp(0.2rem, 1.5vh, 0.75rem); }
+
+        .day-card {
+            border-right: 2px solid var(--border-color);
+            box-shadow: 10px 0 15px -10px var(--shadow-color);
+            transform-origin: center 150%; 
+            will-change: transform, opacity;
+        }
+
+        @supports (animation-timeline: view()) {
+            .day-card {
+                animation: wheel-arch linear both;
+                animation-timeline: view(inline);
+            }
+            @keyframes wheel-arch {
+                0% { transform: rotate(12deg) scale(0.85); opacity: 0.2; }
+                50% { transform: rotate(0deg) scale(1); opacity: 1; }
+                100% { transform: rotate(-12deg) scale(0.85); opacity: 0.2; }
+            }
+        }
+
+        .festival-panel, .month-panel, .boat-panel {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(2rem);
+        }
+        .festival-panel.is-active, .month-panel.is-active, .boat-panel.is-active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .modal-overlay {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .modal-overlay.modal-open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            transform: scale(0.95);
+        }
+        .modal-overlay.modal-open .modal-content {
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col relative">
+
+    <header class="w-full bg-[var(--header-bg)] p-3 md:p-4 flex justify-between items-center z-20 shrink-0 transition-colors duration-500">
+        <div class="flex items-center gap-2 md:gap-3">
+            <div onclick="openKemetPanel()" class="flex flex-col justify-center cursor-pointer group transition-colors relative" title="了解「黑土」的由來">
+                <span class="hieroglyph text-2xl md:text-3xl text-[var(--ink-black)] group-hover:text-[var(--ink-red)] transition-colors duration-300 leading-none mb-1">𓆎 𓅱𓉔𓅓 𓂋𓈖𓊪𓏏</span>
+                <div class="flex items-baseline gap-1.5">
+                    <h1 class="fluid-text-base font-bold tracking-widest text-[var(--ink-black)] group-hover:text-[var(--ink-red)] transition-colors duration-300 leading-none flex items-center gap-1">
+                        凱美特復興曆
+                        <svg class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </h1>
+                    <span class="text-[10px] md:text-xs text-[var(--text-muted)] font-mono leading-none">(Kemet Wahem Renpet)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2 md:gap-3">
+            <button onclick="openFestivalList()" class="bg-[var(--ink-black)] text-[var(--papyrus)] px-3 py-1.5 md:px-4 md:py-2 rounded flex items-center justify-center transition shadow-md hover:opacity-80" title="節日">
+                <span class="font-bold tracking-widest fluid-text-sm flex items-center gap-1 transition-colors">
+                    <span class="hieroglyph text-base md:text-lg mt-0.5">𓎛𓃀𓎱</span> <span class="hidden md:inline">節日</span>
+                </span>
+            </button>
+            <button onclick="scrollToToday()" class="bg-[var(--ink-black)] text-[var(--papyrus)] px-3 py-1.5 md:px-4 md:py-2 rounded flex items-center justify-center transition shadow-md hover:opacity-80">
+                <span class="font-bold tracking-widest fluid-text-sm flex items-center gap-1">
+                    <span class="hieroglyph text-base md:text-lg mt-0.5">𓅓𓇋𓈖𓇳</span> 今日
+                </span>
+            </button>
+        </div>
+    </header>
+
+    <div class="relative w-full h-[6px] bg-[var(--track-base-bg)] z-30 shrink-0 shadow-sm transition-colors duration-500">
+        <div id="timelineTrack" class="absolute top-0 bottom-0 left-4 right-4 md:left-8 md:right-8 transition-opacity"></div>
+
+        <div class="absolute top-1/2 left-4 right-4 md:left-8 md:right-8 h-10 transform -translate-y-1/2">
+            <div id="visualThumb" class="absolute top-1/2 bg-[var(--carnelian-red)] rounded-full shadow-[0_3px_8px_var(--shadow-color)] border-2 border-[var(--papyrus)] flex items-center justify-center pointer-events-none z-10 px-2 py-1 md:px-3 md:py-1.5 gap-1 md:gap-2 min-w-[60px] md:min-w-[76px] transition-transform" style="left: 0%; transform: translate(-50%, -50%);">
+                <span class="hieroglyph text-[#E9DCC9] text-lg md:text-xl transform rotate-90 origin-center leading-none">𓆣</span>
+                <span id="sliderDayText" class="text-[#E9DCC9] font-bold fluid-text-sm font-mono tracking-widest leading-none pt-0.5">1</span>
+            </div>
+            <input type="range" id="daySlider" min="1" max="365" value="1" class="absolute w-full h-full opacity-0 cursor-pointer m-0 z-20 top-0 left-0" title="連按兩下以探索時間推動者神話">
+        </div>
+    </div>
+
+    <main id="scrollContainer" class="scroll-container flex-1 w-full overflow-x-auto overflow-y-hidden flex snap-x snap-mandatory items-center py-8 md:py-10">
+        </main>
+
+    <div id="kemetModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300" onclick="closeKemetPanel()">
+        <div class="modal-content bg-[var(--card-bg)] w-[90vw] max-w-sm rounded-xl fluid-modal-p shadow-2xl transition-transform duration-300 flex flex-col border-4 border-double border-[var(--ink-black)] relative cursor-pointer overflow-hidden" onclick="event.stopPropagation(); closeKemetPanel()">
+            <button onclick="closeKemetPanel()" class="absolute top-3 right-3 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--ink-black)] text-[var(--papyrus)] flex items-center justify-center hover:opacity-80 transition z-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div class="flex flex-col items-center shrink-0 mt-1">
+                <span class="hieroglyph fluid-h-mega text-[var(--ink-black)] drop-shadow-sm leading-none">𓆎𓅓𓏏𓊖</span>
+                <div class="flex items-baseline justify-center gap-1.5 border-b border-[var(--border-color)] pb-2 w-full mb-3">
+                    <span class="font-bold text-[var(--text-main)] fluid-title-lg tracking-widest">黑土地</span>
+                    <span class="fluid-subtitle text-[var(--text-muted)] font-mono">(Kemet)</span>
+                </div>
+            </div>
+            <div class="shrink-0 flex flex-col gap-2">
+                <p class="fluid-desc text-[var(--text-main)] font-medium text-justify px-1">古埃及人並不稱自己的國家為「埃及」，而是自稱為「<strong class="text-[var(--ink-black)]">凱美特 (Kemet)</strong>」，意為「<strong class="text-[var(--ink-black)]">黑土地</strong>」。這源自尼羅河每年氾濫退去後留下的黑色淤泥，是孕育生命的根本。<br><br>這與象徵死亡的沙漠「<strong class="text-[var(--carnelian-red)]">代什雷特 (Deshret，紅土地)</strong>」形成強烈對比。這種基於地理的地域自決，展現了他們對自然恩賜的敬畏。<br><br>而「<strong class="text-[var(--sacred-green)]">瓦赫姆·雷內佩特 (Wahem Renpet)</strong>」意謂「重生的年份」。結合兩者，代表著黑土地在每年洪水中無盡重生的循環秩序與生命力。</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="festivalListModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300" onclick="closeFestivalList()">
+        <div class="modal-content bg-[var(--card-bg)] w-[90vw] max-w-sm rounded-xl p-5 md:p-6 shadow-2xl transition-transform duration-300 max-h-[85vh] flex flex-col border-4 border-double border-[var(--ink-black)]" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b-2 border-[var(--border-color)] pb-3 mb-2 md:pb-4 md:mb-3 shrink-0">
+                <h2 class="text-lg md:text-xl font-bold text-[var(--ink-black)] tracking-widest flex items-center gap-2">
+                    <span class="hieroglyph text-2xl md:text-3xl text-[var(--ink-red)]">𓎛𓃀𓎱</span> 皇家節慶一覽
+                </h2>
+                <button onclick="closeFestivalList()" class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--ink-black)] text-[var(--papyrus)] flex items-center justify-center hover:opacity-80 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="relative flex-1 min-h-0 flex flex-col">
+                <div id="festivalListContainer" class="flex-1 overflow-y-auto custom-scrollbar flex flex-col pb-8">
+                    </div>
+                <div id="scrollIndicator" class="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-[var(--ink-red)] pointer-events-none transition-all duration-300 animate-bounce opacity-0">
+                    <svg id="scrollIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="scarabModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300" onclick="closeScarabPanel()">
+        <div class="modal-content bg-[var(--card-bg)] w-[90vw] max-w-sm rounded-xl fluid-modal-p shadow-2xl transition-transform duration-300 flex flex-col border-4 border-double border-[var(--ink-black)] relative cursor-pointer overflow-hidden" onclick="event.stopPropagation(); closeScarabPanel()">
+            <button onclick="closeScarabPanel()" class="absolute top-3 right-3 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--ink-black)] text-[var(--papyrus)] flex items-center justify-center hover:opacity-80 transition z-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div class="flex flex-col items-center shrink-0 mt-1">
+                <span class="hieroglyph fluid-h-mega text-[var(--carnelian-red)] drop-shadow-sm leading-none">𓆣</span>
+                <div class="flex items-baseline justify-center gap-1.5 border-b border-[var(--border-color)] pb-2 w-full mb-3">
+                    <span class="font-bold text-[var(--text-main)] fluid-title-lg tracking-widest">時間的推動者</span>
+                    <span class="fluid-subtitle text-[var(--text-muted)] font-mono">(Khepri)</span>
+                </div>
+            </div>
+            <div class="shrink-0 flex flex-col gap-2">
+                <p class="fluid-desc text-[var(--text-main)] font-medium text-justify px-1">在古埃及的宇宙觀中，聖甲蟲（Scarab）代表早晨的太陽神「凱布利」（Khepri），其象形文字「𓆣」蘊含著「形成、轉化與重生」之意。<br><br>古埃及人觀察到甲蟲將糞球推過沙地的行為，便將其聯想為神祇每日將太陽推過天際的偉大旅程。在曆法的軌道上，這隻聖甲蟲不僅是標示日期的游標，更寓意著時間的運行不息：每一天的日升日落，都是宇宙秩序（Maat）的更新與生命的永恆重啟。</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="todayModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300" onclick="closeTodayPanel()">
+        <div class="modal-content bg-[var(--card-bg)] w-[90vw] max-w-sm rounded-xl fluid-modal-p shadow-2xl transition-transform duration-300 flex flex-col border-4 border-double border-[var(--ink-black)] relative cursor-pointer overflow-hidden" onclick="event.stopPropagation(); closeTodayPanel()">
+            <button onclick="closeTodayPanel()" class="absolute top-3 right-3 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--ink-black)] text-[var(--papyrus)] flex items-center justify-center hover:opacity-80 transition z-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div class="flex flex-col items-center shrink-0 mt-1">
+                <span class="hieroglyph fluid-h-mega text-[var(--carnelian-red)] drop-shadow-sm leading-none">𓇳</span>
+                <div class="flex items-baseline justify-center gap-1.5 border-b border-[var(--border-color)] pb-2 w-full mb-3">
+                    <span class="font-bold text-[var(--text-main)] fluid-title-lg tracking-widest">太陽與今日</span>
+                    <span class="fluid-subtitle text-[var(--text-muted)] font-mono">(Ra & Mjn)</span>
+                </div>
+            </div>
+            <div class="shrink-0 flex flex-col gap-2">
+                <p class="fluid-desc text-[var(--text-main)] font-medium text-justify px-1">在古埃及文裡，圓圈中間帶一點的符號「<strong class="text-[var(--carnelian-red)]">𓇳</strong>」不僅代表<strong class="text-[var(--ink-black)]">太陽神「拉」(Ra)</strong>，它也是代表「<strong class="text-[var(--ink-black)]">日子」(Heru)</strong>」與時間的限定符。<br><br>清晨由聖甲蟲「<strong class="text-[var(--ink-black)]">凱布利</strong>」將太陽推升，正午化為強大的「<strong class="text-[var(--ink-black)]">拉</strong>」，黃昏則變為年邁的「<strong class="text-[var(--ink-black)]">阿圖姆</strong>」步入冥界。而代表「今日」的詞彙「<strong class="text-[var(--carnelian-red)]">Mjn (𓅓𓇋𓈖𓇳)</strong>」，正是這永恆生命輪迴中，當下最神聖的瞬間。<br><br>巧合的是，「日子」(Heru) 的發音與天空之神「<strong class="text-[var(--lapis-blue)]">荷魯斯 (Horus/Heru)</strong>」相同。荷魯斯的右眼即是太陽，象徵著光明、王權與庇護。把握「今日」，就是在太陽神凝視下，體驗宇宙的和諧運行。</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="numberModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300" onclick="closeNumberPanel()">
+        <div class="modal-content bg-[var(--card-bg)] w-[90vw] max-w-sm rounded-xl fluid-modal-p shadow-2xl transition-transform duration-300 flex flex-col border-4 border-double border-[var(--ink-black)] relative cursor-pointer overflow-hidden" onclick="event.stopPropagation(); closeNumberPanel()">
+            <button onclick="closeNumberPanel()" class="absolute top-3 right-3 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--ink-black)] text-[var(--papyrus)] flex items-center justify-center hover:opacity-80 transition z-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div class="flex flex-col items-center shrink-0 mt-1">
+                <div class="flex items-center gap-2 mb-1 text-[var(--ink-black)] drop-shadow-sm">
+                    <span class="hieroglyph fluid-h-mega leading-none">𓎆</span>
+                    <span class="hieroglyph fluid-h-mega leading-none">𓏺</span>
+                </div>
+                <div class="flex items-baseline justify-center gap-1.5 border-b border-[var(--border-color)] pb-2 w-full mb-3">
+                    <span class="font-bold text-[var(--text-main)] fluid-title-lg tracking-widest">十進位數字系統</span>
+                    <span class="fluid-subtitle text-[var(--text-muted)] font-mono">(Numbers)</span>
+                </div>
+            </div>
+            <div class="shrink-0 flex flex-col gap-2">
+                <p class="fluid-desc text-[var(--text-main)] font-medium text-justify px-1">古埃及的數學採用「<strong class="text-[var(--ink-black)]">十進位制</strong>」，但他們並沒有「零」的概念。他們透過「重複畫出符號」來表示特定數值。<br><br>最基本的單位是一根代表 1 的木棍「<strong class="text-[var(--ink-black)]">𓏺</strong>」，而 10 則用代表束縛牛隻的繩套「<strong class="text-[var(--ink-black)]">𓎆</strong>」來表示。<br><br><strong class="text-[var(--ink-black)]">排版規律與幾何美感：</strong><br>為了節省書寫空間並追求神廟銘文的方塊美感，古埃及人不會將相同的符號排成一長串。例如數字 7 不會寫成平行的七根棍子，而是疊成「<strong class="text-[var(--ink-black)]">𓏿</strong>」。當十位數與個位數同時存在時（例如 24），會將兩個十寫在前面或上方，緊接著四個一「<strong class="text-[var(--ink-black)]">𓎇𓏼</strong>」，形成嚴謹而優美的幾何矩陣。</p>
+            </div>
+        </div>
+    </div>
+
+    <footer onclick="toggleTheme()" class="absolute bottom-4 md:bottom-6 right-4 md:right-6 opacity-40 text-right z-30 cursor-pointer hover:opacity-80 transition" title="隱藏開關：點擊測試晝夜交替">
+        <span class="hieroglyph text-2xl md:text-3xl text-[var(--ink-black)]">𓏞𓀀</span>
+        <p class="fluid-text-xs tracking-widest mt-1 text-[var(--text-main)]">皇家天文台 紀錄</p>
+    </footer>
+
+    <script>
+        function toEgyptianNumeral(num) {
+            const units = ["", "𓏺", "𓏻", "𓏼", "𓏽", "𓏾", "𓏿", "𓐀", "𓐁", "𓐂"];
+            const tens = ["", "𓎆", "𓎇", "𓎈"]; 
+            let result = "";
+            if (Math.floor(num / 10) > 0) result += tens[Math.floor(num / 10)];
+            if (num % 10 > 0) result += units[num % 10];
+            return result;
+        }
+
+        const vocab = { day: "𓉔𓂋𓅱𓇳", day_py: "Heru", day_trans: "日" };
+        const seasons = [
+            { id: 0, trans: "泛濫季", py: "Akhet", h_name: "𓈌𓏏𓇳", color: "var(--sacred-green)" },
+            { id: 1, trans: "播種季", py: "Peret", h_name: "𓉐𓂋𓏏𓇳", color: "var(--ink-black)" },
+            { id: 2, trans: "收穫季", py: "Shemu", h_name: "𓈙𓈗𓇳", color: "var(--ink-red)" }
+        ];
+
+        const monthsData = [
+            { id: 1, standard: { h_name: "𓅤𓎛𓃀𓎱", trans: "托特", py: "Dyehuty" }, ancient: { h_name: "𓍘𓐍𓏌𓇳", trans: "泰赫", py: "Tekh" }, desc: "古名「Tekh」意指「飲酒者」，與新年醉酒節有關；後來直接以智慧之神「托特」命名。" },
+            { id: 2, standard: { h_name: "𓊪𓈖𓇋𓊪𓏏𓇳", trans: "奧佩特", py: "Pa-en-ipet" }, ancient: { h_name: "𓏠𓈖𓐍𓏏𓇳", trans: "門赫特", py: "Menhet" }, desc: "新王國時期底比斯崛起了超級嘉年華「奧佩特節」，月份名因此被霸氣取代。" },
+            { id: 3, standard: { h_name: "𓉡𓇳", trans: "哈索爾", py: "Hut-hor" }, ancient: { h_name: "𓉡𓇳", trans: "哈索爾", py: "Hwt-hwr" }, desc: "符號皆為「裝著荷魯斯的聖殿」，皆以愛與美的女神哈索爾命名。" },
+            { id: 4, standard: { h_name: "𓂓𓄿𓁷𓂋𓂓𓄿𓇳", trans: "科伊亞克", py: "Ka-hor-ka" }, ancient: { h_name: "𓂓𓁷𓂋𓂓𓇳", trans: "科伊亞克", py: "Ka-hr-ka" }, desc: "拼法略異，但皆指「靈魂之上的靈魂(Ka)」，是著名的奧西里斯神蹟劇舉辦月。" },
+            { id: 5, standard: { h_name: "𓏏𓄿𓂝𓃀𓏏𓇳", trans: "塔-阿貝特", py: "Ta-Aabet" }, ancient: { h_name: "𓋴𓆑𓃀𓂧𓏏𓇠𓇳", trans: "舍夫-貝德特", py: "Sf-bdt" }, desc: "古名意為「小麥的膨脹」，帶有麥穗符號，充滿農業色彩；晚期改為「供品之月」。" },
+            { id: 6, standard: { h_name: "𓊪𓈖𓅓𓆰𓂋𓇳", trans: "梅傑爾", py: "Pa-en-Mejer" }, ancient: { h_name: "𓂋𓐍𓊮𓅨𓂋𓇳", trans: "大火", py: "Rekh wer" }, desc: "古名意為「大火」，帶有火盆符號，可能與寒冬取暖或某種火祭有關。" },
+            { id: 7, standard: { h_name: "𓊪𓈖𓇋𓏠𓈖𓊵𓏏𓊪𓇳", trans: "阿蒙霍特普", py: "Pa-en-Amon-Hetep" }, ancient: { h_name: "𓂋𓐍𓊮𓈖𓂧𓋴𓅪𓇳", trans: "小火", py: "Rekh neds" }, desc: "古名意為「小火」；新王國時期，被神格化的法老「阿蒙霍特普一世」信仰極盛，以此命名。" },
+            { id: 8, standard: { h_name: "𓊪𓈖𓂋𓈖𓈖𓏏𓆗𓇳", trans: "列涅努泰特", py: "Pa-en-Renenutet" }, ancient: { h_name: "𓂋𓈖𓆗𓏏𓇳", trans: "列涅努泰特", py: "Renwet" }, desc: "都是獻給掌管糧倉的眼鏡蛇女神 Renenutet，祈求收割順利。" },
+            { id: 9, standard: { h_name: "𓊪𓈖𓐍𓈖𓋴𓅱𓇳", trans: "孔蘇", py: "Pa-en-Jonsu" }, ancient: { h_name: "𓐍𓈖𓋴𓅱𓇳", trans: "孔蘇", py: "Hnsw" }, desc: "皆以底比斯月神「孔蘇」命名。" },
+            { id: 10, standard: { h_name: "𓊪𓈖𓇋𓈖𓏏𓇳", trans: "恩內特/山谷節", py: "Pa-en-Enet" }, ancient: { h_name: "𓏃𓈖𓏏𓐍𓏏𓇋𓇋𓇳", trans: "肯提-赫提", py: "Hnt-htj" }, desc: "古名以鱷魚神命名；新王國時「山谷美麗節」太受歡迎，月份名改以該節日稱呼。" },
+            { id: 11, standard: { h_name: "𓇋𓊪𓇋𓊪𓇳", trans: "伊皮普", py: "Epiphi" }, ancient: { h_name: "𓇋𓊪𓏏𓎛𓅓𓏏𓇳", trans: "伊佩特-赫梅特", py: "Ipt-hmt" }, desc: "古名與河馬女神有關；後來演化為 Epiphi，有祈求避開毒蛇惡魔之意。" },
+            { id: 12, standard: { h_name: "𓄟𓋴𓏏𓇳𓏺", trans: "拉的誕生", py: "Mesut-Ra" }, ancient: { h_name: "𓄋𓊪𓆳𓏏𓇳", trans: "開年", py: "Wep-renpet" }, desc: "古名極為特殊，把準備迎接新年的「棕櫚枝」作為最後一個月；晚期改稱「太陽神拉的誕生」。" }
+        ];
+
+        const festivalData = {
+            "wepet-renpet": { h_name: "𓄋𓊪𓏏𓆳𓏏", name: "Wepet Renpet", trans: "開年節", color: "var(--malachite-green)", desc: "慶祝天狼星偕日升與尼羅河開始氾濫。代表舊的一年結束與新生命的復甦，是最歡樂的新年慶典。" },
+            "wag": { h_name: "𓍯𓎼𓎛𓃀𓎱", name: "Wag Festival", trans: "瓦格節", color: "var(--carnelian-red)", desc: "祭祖節日，專門祭祀亡者與冥王奧西里斯。家家戶戶會製作蘆葦小船放入尼羅河中，引導亡魂前行。" },
+            "thoth": { h_name: "𓅤𓎛𓃀𓎱", name: "Feast of Thoth", trans: "托特節", color: "var(--lapis-blue)", desc: "獻給智慧、書記與月亮之神托特的節日。特別受到書吏們的敬重，祈求智慧與知識的庇佑。" },
+            "drunkenness": { h_name: "𓉡𓎛𓃀𓎱", name: "Festival of Drunkenness", trans: "哈索爾醉酒節", color: "var(--carnelian-red)", desc: "為了安撫差點毀滅人類的母獅神（化為溫暖的哈索爾），民眾在這天會大量飲酒、聽音樂狂歡。" },
+            "opet": { h_name: "𓇋𓊪𓏏𓎛𓃀𓎱", name: "Opet Festival", trans: "奧佩特節", color: "var(--carnelian-red)", desc: "底比斯最盛大的水上嘉年華。阿蒙神的神像會被請上神聖駁船，沿著尼羅河遊行到盧克索神廟。" },
+            "khoiak": { h_name: "𓂓𓄿𓁷𓂋𓂓𓄿", name: "Khoiak Festival", trans: "科伊亞克節", color: "var(--malachite-green)", desc: "全國性的神蹟劇，重演奧西里斯死亡到復活的神話。農民會種下「奧西里斯麥床」，其發芽象徵死而復生。" },
+            "sokar": { h_name: "𓊃𓎡𓂋𓎛𓃀𓎱", name: "Feast of Sokar", trans: "索卡爾節", color: "var(--lapis-blue)", desc: "與孟菲斯冥界神索卡爾相關的祭典。法老會親自牽引裝載著神聖石塊的太陽船在沙漠中遊行。" },
+            "nehebkau": { h_name: "𓈖𓎛𓃀𓂓𓅱𓎛𓃀𓎱", name: "Nehebkau Festival", trans: "內赫布考節", color: "var(--malachite-green)", desc: "慶祝靈魂與肉體重新結合、萬物復甦的節日。內赫布考是一條守護神蛇，負責綁定靈魂與身體。" },
+            "mut": { h_name: "𓏏𓅐𓎛𓃀𓎱", name: "Festival of Mut", trans: "姆特女神節", color: "var(--lapis-blue)", desc: "底比斯姆特女神的專屬慶典。女神的神像會乘船航行於聖湖上，象徵宇宙秩序的延續與生育的祝福。" },
+            "renenutet": { h_name: "𓂋𓈖𓈖𓏏𓆗𓎛𓃀𓎱", name: "Feast of Renenutet", trans: "列涅努泰特節", color: "var(--malachite-green)", desc: "農民會將第一批初長成的麥穗與美酒獻給掌管糧倉的蛇之女神，祈求即將到來的收割季節大豐收。" },
+            "min": { h_name: "𓋉𓈖𓎛𓃀𓎱", name: "Feast of Min", trans: "敏神節", color: "var(--carnelian-red)", desc: "慶祝豐收與生殖神的遊行。法老會親自出席揮動鐮刀割下第一把麥穗，祈求土地與人民的豐饒。" },
+            "valley": { h_name: "𓎛𓃀𓎱𓄤𓈖𓇋𓈖𓏏", name: "Beautiful Feast of the Valley", trans: "山谷美麗節", color: "var(--lapis-blue)", desc: "古埃及的掃墓嘉年華。活人會帶著大量啤酒渡河來到西岸墓區，在祖先的墓室前野餐共飲團聚。" },
+            "reunion": { h_name: "𓎛𓃀𓎱𓄤𓈖𓋴𓌖𓐍𓈖𓏏", name: "Feast of the Beautiful Reunion", trans: "美麗相聚節", color: "var(--carnelian-red)", desc: "哈索爾女神的神像乘船順流而下前往埃德富與丈夫荷魯斯相聚。整個節期長達 14 天徹夜狂歡。" },
+            "ptah": { h_name: "𓊪𓏏𓎛", name: "Feast of Ptah", trans: "普塔節", color: "var(--lapis-blue)", desc: "孟菲斯創世神、工匠之神普塔的祭典。象徵創造力與工藝的祝福，以及世界秩序的建立。" },
+            "hapi-amun": { h_name: "𓎛𓂝𓊪𓇋𓈗", name: "Feast of Hapi & Amun", trans: "哈皮與阿蒙節", color: "var(--malachite-green)", desc: "慶祝尼羅河神哈皮與底比斯主神阿蒙的節日，祈求豐沛的河水滋養埃及大地。" },
+            "min-growth": { h_name: "𓋉𓈖", name: "Growth of Min", trans: "敏的生長節", color: "var(--sacred-green)", desc: "敏神的衍生豐饒節日，象徵植物與生命的蓬勃生長與自然生機。" },
+            "maat": { h_name: "𓌷𓂝𓏏", name: "Feast of Maat", trans: "瑪特節", color: "var(--lapis-blue)", desc: "獻給真理與秩序女神瑪特的節日。這一天提醒人們遵循宇宙的和諧與道德準則。" },
+            "bastet": { h_name: "𓃀𓄿𓋴𓏏𓏏", name: "Feast of Bastet", trans: "芭絲特節", color: "var(--carnelian-red)", desc: "貓首女神芭絲特的狂歡節。人們會乘船遊行、暢飲、演奏音樂，是古埃及最熱鬧的節日之一。" },
+            "anubis": { h_name: "𓇋𓈖𓊪𓅱", name: "Feast of Anubis", trans: "阿努比斯節", color: "var(--lapis-blue)", desc: "祭祀冥界防腐神與亡者守護神阿努比斯的莊嚴節日，引導並守護亡魂前往來世。" },
+            "normal": { h_name: "𓎛𓂋𓅱𓄤", name: "Heru Nefer", trans: "平靜之日", color: "var(--ink-black)", desc: "今日並無國家級慶典。古埃及人會進行日常農作或前往神廟祈禱，遵循著「瑪亞特」的和諧秩序安穩度過。" }
+        };
+
+        function getFestivalForDay(dayIndex) {
+            if (dayIndex === 1) return { key: "wepet-renpet", ...festivalData["wepet-renpet"] };
+            if (dayIndex === 15) return { key: "hapi-amun", ...festivalData["hapi-amun"] };
+            if (dayIndex >= 17 && dayIndex <= 18) return { key: "wag", ...festivalData["wag"] };
+            if (dayIndex === 19) return { key: "thoth", ...festivalData["thoth"] };
+            if (dayIndex === 20) return { key: "drunkenness", ...festivalData["drunkenness"] };
+            if (dayIndex >= 45 && dayIndex <= 55) return { key: "opet", ...festivalData["opet"] }; 
+            if (dayIndex === 75) return { key: "min-growth", ...festivalData["min-growth"] };
+            if (dayIndex === 81) return { key: "maat", ...festivalData["maat"] };
+            if (dayIndex >= 102 && dayIndex <= 115) return { key: "khoiak", ...festivalData["khoiak"] }; 
+            if (dayIndex === 116) return { key: "sokar", ...festivalData["sokar"] }; 
+            if (dayIndex >= 117 && dayIndex <= 120) return { key: "khoiak", ...festivalData["khoiak"] }; 
+            if (dayIndex === 121) return { key: "nehebkau", ...festivalData["nehebkau"] }; 
+            if (dayIndex === 140) return { key: "mut", ...festivalData["mut"] }; 
+            if (dayIndex === 181) return { key: "ptah", ...festivalData["ptah"] };
+            if (dayIndex === 211) return { key: "renenutet", ...festivalData["renenutet"] }; 
+            if (dayIndex === 214) return { key: "bastet", ...festivalData["bastet"] };
+            if (dayIndex === 250) return { key: "anubis", ...festivalData["anubis"] };
+            if (dayIndex === 251) return { key: "min", ...festivalData["min"] }; 
+            if (dayIndex >= 271 && dayIndex <= 272) return { key: "valley", ...festivalData["valley"] }; 
+            if (dayIndex >= 301 && dayIndex <= 314) return { key: "reunion", ...festivalData["reunion"] }; 
+            if (dayIndex === 354) return { key: "ptah", ...festivalData["ptah"] };
+            return { key: "normal", ...festivalData["normal"] };
+        }
+
+        const container = document.getElementById('scrollContainer');
+        const slider = document.getElementById('daySlider');
+        const visualThumb = document.getElementById('visualThumb');
+        const sliderDayText = document.getElementById('sliderDayText');
+        
+        // 漫遊曆推算 (基準：2022-04-18)
+        const baseDate = new Date(2022, 3, 18); 
+        baseDate.setHours(0, 0, 0, 0);
+        
+        const now = new Date();
+        const todayAtMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        const diffTime = todayAtMidnight - baseDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        let daysSinceBase = diffDays;
+        if (daysSinceBase < 0) {
+            const offsetYears = Math.ceil(Math.abs(daysSinceBase) / 365);
+            daysSinceBase += offsetYears * 365;
+        }
+        
+        const ancientYearsSinceBase = Math.floor(diffDays / 365);
+        let currentDayIndex = (daysSinceBase % 365) + 1;
+        
+        const todayDayIndex = currentDayIndex;
+        let todayElementId = `day-${Math.min(365, todayDayIndex)}`;
+
+        let startOfYear = new Date(baseDate);
+        startOfYear.setDate(baseDate.getDate() + (ancientYearsSinceBase * 365));
+        
+        let isSliding = false; 
+        let manualTheme = false;
+
+        window.toggleTheme = function() {
+            manualTheme = true;
+            document.body.classList.toggle('dark-mode');
+        }
+
+        window.toggleFestivalPanel = function(dayId) {
+            const panel = document.getElementById('panel-' + dayId);
+            if (panel) panel.classList.toggle('is-active');
+        };
+
+        window.toggleMonthPanel = function(dayId) {
+            const panel = document.getElementById('month-panel-' + dayId);
+            if (panel) panel.classList.toggle('is-active');
+        };
+
+        window.toggleBoatPanel = function(dayId) {
+            const panel = document.getElementById('boat-panel-' + dayId);
+            if (panel) panel.classList.toggle('is-active');
+        };
+
+        window.openFestivalList = function() {
+            document.getElementById('festivalListModal').classList.add('modal-open');
+            setTimeout(updateScrollIndicator, 50);
+        };
+
+        window.closeFestivalList = function() {
+            document.getElementById('festivalListModal').classList.remove('modal-open');
+        };
+
+        window.openKemetPanel = function() {
+            document.getElementById('kemetModal').classList.add('modal-open');
+        };
+
+        window.closeKemetPanel = function() {
+            document.getElementById('kemetModal').classList.remove('modal-open');
+        };
+
+        window.openScarabPanel = function() {
+            document.getElementById('scarabModal').classList.add('modal-open');
+        };
+
+        window.closeScarabPanel = function() {
+            document.getElementById('scarabModal').classList.remove('modal-open');
+        };
+
+        window.openTodayPanel = function() {
+            document.getElementById('todayModal').classList.add('modal-open');
+        };
+
+        window.closeTodayPanel = function() {
+            document.getElementById('todayModal').classList.remove('modal-open');
+        };
+
+        window.openNumberPanel = function() {
+            document.getElementById('numberModal').classList.add('modal-open');
+        };
+
+        window.closeNumberPanel = function() {
+            document.getElementById('numberModal').classList.remove('modal-open');
+        };
+
+        window.jumpToDay = function(dayIndex) {
+            closeFestivalList();
+            slider.value = dayIndex;
+            updateThumbPosition();
+            const targetCard = document.getElementById(`day-${dayIndex}`);
+            if (targetCard) {
+                targetCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+        };
+
+        function renderYear() {
+            let allCardsHTML = '';
+            // 為了實現邊界無縫感，i 從 -1 到 367 (渲染去年最後2天與明年最前2天的 Padding 卡片)
+            for (let i = -1; i <= 367; i++) {
+                const isPadding = i < 1 || i > 365;
+                const dayId = isPadding ? `pad-${i}` : `day-${i}`;
+                const wrappedDay = ((i - 1 + 365) % 365) + 1; // 將天數完美轉換回 1~365 的循環
+                const isToday = (!isPadding && wrappedDay === todayDayIndex);
+                
+                const cardDate = new Date(startOfYear.getFullYear(), startOfYear.getMonth(), startOfYear.getDate() + (i - 1));
+                const modernDateStr = `${cardDate.getFullYear()}/${String(cardDate.getMonth() + 1).padStart(2, '0')}/${String(cardDate.getDate()).padStart(2, '0')}`;
+
+                let cardHTML = '';
+                
+                if (wrappedDay <= 360) {
+                    const seasonIdx = Math.floor((wrappedDay - 1) / 120);
+                    const season = seasons[seasonIdx];
+                    const monthTotalIdx = Math.floor((wrappedDay - 1) / 30);
+                    const month = monthsData[monthTotalIdx];
+                    const monthInSeason = (monthTotalIdx % 4) + 1;
+                    const dayOfMonth = ((wrappedDay - 1) % 30) + 1;
+                    const fest = getFestivalForDay(wrappedDay); 
+
+                    cardHTML = `
+                        <div id="${dayId}" class="day-card snap-center shrink-0 fluid-card mx-2 md:mx-4 flex flex-col justify-between fluid-spacing relative bg-[var(--card-bg)] rounded-xl ${isToday ? 'bg-[var(--card-today)] border-2 border-[var(--border-color)] z-10' : ''}">
+                            
+                            ${isToday ? `<div onclick="openTodayPanel()" class="absolute -top-3 md:-top-4 left-1/2 transform -translate-x-1/2 bg-[var(--carnelian-red)] text-[#E9DCC9] px-4 py-1 fluid-text-sm font-bold tracking-widest rounded-full shadow-md z-20 flex items-center gap-1 whitespace-nowrap border-2 border-[var(--card-today)] cursor-pointer hover:bg-[var(--ink-red)] hover:shadow-lg transition-all" title="探索「今日」與太陽的象徵"><span class="hieroglyph fluid-text-lg mt-0.5">𓇳</span> 今日 <span class="fluid-text-xs opacity-90 font-mono">(Mjn)</span></div>` : ''}
+
+                            <div onclick="toggleMonthPanel('${dayId}')" class="text-center border-b-2 border-[var(--border-color)] pb-2 flex-shrink-0 flex flex-col items-center justify-center cursor-pointer group transition-colors hover:bg-[var(--shadow-color)] rounded-t-xl relative pt-1">
+                                <div class="absolute right-1 top-1 md:right-2 md:top-2 text-[var(--text-muted)] opacity-0 group-hover:opacity-60 transition-opacity">
+                                    <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                </div>
+                                <div class="hieroglyph fluid-h-xl mb-1 drop-shadow-sm flex justify-center items-center gap-1">
+                                    <span class="text-[var(--ink-black)]">𓇹${toEgyptianNumeral(monthInSeason)}</span>
+                                    <span style="color: ${season.color};">${season.h_name}</span>
+                                </div>
+                                <h2 class="fluid-text-lg font-bold text-[var(--text-main)] mb-0.5 tracking-wide leading-tight">${season.trans} <span class="fluid-text-sm text-[var(--text-muted)] font-mono">(${season.py})</span></h2>
+                                <p class="fluid-text-sm font-bold tracking-wide text-[var(--text-muted)] leading-tight">第${monthInSeason}月 · ${month.standard.trans} <span class="fluid-text-xs font-mono opacity-80">(${month.standard.py})</span></p>
+                            </div>
+
+                            <div class="flex-1 flex flex-col items-center justify-start pt-1.5 md:pt-2 pb-1 gap-2 md:gap-3 relative min-h-0">
+                                <div class="border border-[var(--border-color)] text-[var(--text-muted)] px-3 py-1 rounded-full fluid-text-sm font-mono tracking-widest flex items-center gap-2 flex-shrink-0">
+                                    <svg class="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    ${modernDateStr}
+                                </div>
+                                
+                                <div class="relative fluid-circle-outer flex items-center justify-center mx-auto flex-shrink-0 my-auto">
+                                    ${isToday ? `
+                                    <div class="absolute inset-0 rounded-full border-[4px] border-double border-[var(--ink-black)] opacity-80 pointer-events-none"></div>
+                                    <div class="absolute w-full h-full pointer-events-none transition-transform duration-1000 ease-linear z-20" id="boatWrapper-${dayId}">
+                                        <div onclick="toggleBoatPanel('${dayId}')" class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[85%] pointer-events-auto cursor-pointer hover:scale-125 transition-transform" id="boatInner-${dayId}" title="太陽船宇宙觀">
+                                            <span class="hieroglyph fluid-h-boat text-[var(--ink-black)] drop-shadow-md" id="boatIcon-${dayId}">𓊝</span>
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                    
+                                    <div class="fluid-circle-inner flex flex-col items-center justify-center z-10 transition-colors duration-500 relative">
+                                        <div class="flex flex-col items-center mb-0.5 md:mb-1">
+                                            <span class="hieroglyph fluid-h-lg text-[var(--ink-black)] leading-none">${vocab.day}</span>
+                                            <span class="font-bold text-[var(--text-main)] fluid-text-sm tracking-widest mt-1 leading-none">${vocab.day_trans} <span class="text-[var(--text-muted)] fluid-text-xs font-mono uppercase">(${vocab.day_py})</span></span>
+                                        </div>
+                                        <div onclick="openNumberPanel()" class="flex items-center justify-center gap-2 md:gap-3 mt-1 w-full cursor-pointer group hover:bg-[var(--shadow-color)] rounded transition-colors px-2 py-1" title="探索古埃及數字系統">
+                                            <span class="hieroglyph fluid-h-num text-[var(--ink-black)] leading-none flex-1 text-right group-hover:scale-110 transition-transform">${toEgyptianNumeral(dayOfMonth)}</span>
+                                            <span class="border-l-2 border-[var(--border-color)] h-5 md:h-8"></span>
+                                            <span class="fluid-h-num font-bold text-[var(--text-muted)] font-sans flex-1 text-left leading-none group-hover:text-[var(--ink-black)] transition-colors">${dayOfMonth}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                ${isToday ? `
+                                <div id="timeInfoContainer-${dayId}" class="flex flex-col items-center gap-1 flex-shrink-0">
+                                    <div class="flex items-center gap-1.5 md:gap-2">
+                                        <span class="hieroglyph fluid-h-lg text-[var(--ink-black)] leading-none">𓃹𓈖𓏏</span>
+                                        <div id="hourLabelTrans-${dayId}" class="fluid-text-sm font-bold tracking-widest text-[var(--text-main)] leading-none">
+                                            白天 1 時 <span class="hieroglyph text-[var(--ink-black)]">𓇳</span>
+                                        </div>
+                                    </div>
+                                    <div class="fluid-text-xs text-[var(--text-muted)] tracking-widest leading-none mt-0.5" id="realTime-${dayId}">現世時間 00:00</div>
+                                </div>
+                                ` : '<div class="opacity-0 fluid-text-sm py-1 px-1 flex-shrink-0">&nbsp;</div>'}
+                            </div>
+
+                            <div onclick="toggleFestivalPanel('${dayId}')" class="border-t-2 border-[var(--border-color)] pt-2 md:pt-3 flex-shrink-0 text-center flex flex-col justify-center items-center cursor-pointer group rounded transition-colors hover:bg-[var(--shadow-color)] pb-1 relative z-10">
+                                <div class="flex justify-center items-center mb-0.5 md:mb-1">
+                                    <span class="hieroglyph fluid-h-lg leading-none transition-colors duration-300" style="color: ${fest.color};">${fest.h_name}</span>
+                                </div>
+                                <p class="fluid-text-sm font-bold tracking-widest leading-snug transition-colors" style="color: ${fest.color === 'var(--ink-black)' ? 'var(--text-main)' : fest.color};">${fest.trans} <span class="fluid-text-xs font-mono opacity-80">(${fest.name})</span></p>
+                            </div>
+
+                            <div id="panel-${dayId}" onclick="toggleFestivalPanel('${dayId}')" class="festival-panel absolute inset-x-0 bottom-0 top-[12%] md:top-[15%] bg-[var(--card-bg)]/95 backdrop-blur-sm border-t-[4px] rounded-t-2xl rounded-b-xl shadow-[0_-10px_30px_var(--shadow-color)] z-40 flex flex-col transition-all duration-300 ease-out cursor-pointer overflow-hidden" style="border-color: ${fest.color === 'var(--ink-black)' ? 'var(--border-color)' : fest.color};">
+                                <button onclick="event.stopPropagation(); toggleFestivalPanel('${dayId}')" class="absolute top-3 right-3 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--ink-black)] text-[var(--papyrus)] flex items-center justify-center hover:opacity-80 transition z-50">
+                                    <svg class="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                                <div class="flex-1 p-4 md:p-5 text-center pointer-events-none flex flex-col panel-gap justify-center mt-2">
+                                    <span class="hieroglyph panel-h-icon drop-shadow-sm block" style="color: ${fest.color};">${fest.h_name}</span>
+                                    <div class="shrink-0">
+                                        <h2 class="panel-title font-bold text-[var(--text-main)] tracking-widest leading-tight">${fest.trans}</h2>
+                                        <p class="panel-desc text-[var(--text-muted)] font-mono tracking-wide">(${fest.name})</p>
+                                    </div>
+                                    <div class="shrink-0 mt-1">
+                                        <p class="panel-desc text-[var(--text-main)] font-medium text-justify px-2">${fest.desc}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="month-panel-${dayId}" onclick="toggleMonthPanel('${dayId}')" class="month-panel absolute inset-x-0 bottom-0 top-[10%] md:top-[12%] bg-[var(--card-bg)]/95 backdrop-blur-sm border-t-[4px] border-[var(--ink-black)] rounded-t-2xl rounded-b-xl shadow-[0_-10px_30px_var(--shadow-color)] z-40 flex flex-col transition-all duration-300 ease-out cursor-pointer overflow-hidden">
+                                <button onclick="event.stopPropagation(); toggleMonthPanel('${dayId}')" class="absolute top-3 right-3 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--ink-black)] text-[var(--papyrus)] flex items-center justify-center hover:opacity-80 transition z-50">
+                                    <svg class="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                                <div class="flex-1 p-2 md:p-3 text-center pointer-events-none flex flex-col panel-gap justify-center mt-2">
+                                    <h3 class="panel-desc font-bold text-[var(--text-muted)] tracking-widest border-b border-[var(--border-color)] pb-1 mb-0 shrink-0">月份命名淵源</h3>
+                                    <div class="flex flex-col items-center shrink-0">
+                                        <span class="panel-desc text-[var(--text-main)] bg-[var(--shadow-color)] px-2 py-0.5 rounded font-mono mb-1">通用名 (新王國/托勒密)</span>
+                                        <span class="hieroglyph panel-h-icon text-[var(--ink-black)] drop-shadow-sm leading-none mb-1">${month.standard.h_name}</span>
+                                        <div class="flex items-baseline justify-center gap-1.5">
+                                            <span class="font-bold text-[var(--text-main)] panel-title tracking-widest">${month.standard.trans}</span>
+                                            <span class="panel-desc text-[var(--text-muted)] font-mono">(${month.standard.py})</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col items-center shrink-0 mt-1">
+                                        <span class="panel-desc text-[var(--text-main)] bg-[var(--shadow-color)] px-2 py-0.5 rounded font-mono mb-1">古名 (古王國/中王國)</span>
+                                        <span class="hieroglyph panel-h-icon text-[var(--ink-black)] drop-shadow-sm leading-none mb-1 opacity-80">${month.ancient.h_name}</span>
+                                        <div class="flex items-baseline justify-center gap-1.5">
+                                            <span class="font-bold text-[var(--text-main)] panel-title tracking-widest opacity-90">${month.ancient.trans}</span>
+                                            <span class="panel-desc text-[var(--text-muted)] font-mono opacity-80">(${month.ancient.py})</span>
+                                        </div>
+                                    </div>
+                                    <div class="shrink-0 mt-1">
+                                        <p class="panel-desc text-[var(--text-main)] font-medium text-justify px-1">${month.desc}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="boat-panel-${dayId}" onclick="toggleBoatPanel('${dayId}')" class="boat-panel absolute inset-x-0 bottom-0 top-[10%] md:top-[12%] bg-[var(--card-bg)]/95 backdrop-blur-sm border-t-[4px] border-[var(--ink-black)] rounded-t-2xl rounded-b-xl shadow-[0_-10px_30px_var(--shadow-color)] z-40 flex flex-col transition-all duration-300 ease-out cursor-pointer overflow-hidden">
+                                <button onclick="event.stopPropagation(); toggleBoatPanel('${dayId}')" class="absolute top-3 right-3 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--ink-black)] text-[var(--papyrus)] flex items-center justify-center hover:opacity-80 transition z-50">
+                                    <svg class="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                                <div class="flex-1 p-2 md:p-3 text-center pointer-events-none flex flex-col panel-gap justify-center mt-2">
+                                    <h3 class="panel-desc font-bold text-[var(--text-muted)] tracking-widest border-b border-[var(--border-color)] pb-1 mb-0 shrink-0">古埃及宇宙觀</h3>
+                                    <div class="flex flex-col items-center shrink-0">
+                                        <span class="hieroglyph panel-h-icon text-[var(--ink-black)] drop-shadow-sm leading-none mt-1">𓊝</span>
+                                        <div class="flex items-baseline justify-center gap-1.5">
+                                            <span class="font-bold text-[var(--text-main)] panel-title tracking-widest">太陽船</span>
+                                            <span class="panel-desc text-[var(--text-muted)] font-mono">(Wia n Ra)</span>
+                                        </div>
+                                    </div>
+                                    <div class="shrink-0">
+                                        <p class="panel-desc text-[var(--text-main)] font-medium text-justify px-1">在古埃及的宇宙觀中，太陽神「拉」(Ra) 每日會乘坐太陽船橫越天際。白晝時乘坐「曼傑特」(Mandjet) 帶來光明與生機；日落後則換乘「麥塞克泰特」(Mesektet) 駛入冥界，與混沌之蛇「阿佩普」(Apep) 徹夜搏鬥。黎明時分的勝利，象徵著死而復生與宇宙秩序 (Maat) 的維持。</p>
+                                    </div>
+                                    <div class="shrink-0">
+                                        <h4 class="panel-desc font-bold text-[var(--text-main)] tracking-widest border-b border-dashed border-[var(--border-color)] pb-0.5 inline-block mb-1">晝夜與 24 時辰</h4>
+                                        <p class="panel-desc text-[var(--text-main)] font-medium text-justify px-1">古埃及是世界上最早將一天劃分出 24 小時的文明。他們將白晝與黑夜各分為 12 個時辰（𓃹𓈖𓏏，Unut）。這是會隨季節伸縮的「不等長時辰」。這 24 個時辰更是太陽船的航線圖。黑夜的 12 時辰對應冥界（Duat）的 12 道關卡。太陽神必須過關斬將，才能確保朝陽升起。</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    `;
+                } else {
+                    const epagDay = wrappedDay - 360;
+                    const gods = [
+                        { name: "歐西里斯", pinyin: "Osiris", trans: "冥界與復活之神", h_name: "𓁹𓊨" },
+                        { name: "荷魯斯", pinyin: "Horus", trans: "天空與王權之神", h_name: "𓅃" },
+                        { name: "賽特", pinyin: "Set", trans: "混亂與風暴之神", h_name: "𓃫" },
+                        { name: "伊西斯", pinyin: "Isis", trans: "魔法與生命女神", h_name: "𓊨𓏏" },
+                        { name: "奈芙蒂斯", pinyin: "Nephthys", trans: "守護與喪葬女神", h_name: "𓉠𓏏" }
+                    ];
+                    const god = gods[epagDay - 1];
+
+                    const fest = {
+                        h_name: god.h_name,
+                        trans: `${god.name}誕辰`,
+                        name: "Mesut Neter",
+                        desc: `慶祝${god.name}（${god.pinyin}）——${god.trans}的誕生。這是一年當中最神聖且充滿魔法的「歲末五日」之一，古埃及人會在這天暫停日常工作，專心進行祈禱、慶祝並佩戴護身符以求平安。`,
+                        color: "var(--carnelian-red)"
+                    };
+
+                    cardHTML = `
+                        <div id="${dayId}" class="day-card snap-center shrink-0 fluid-card mx-2 md:mx-4 flex flex-col justify-between fluid-spacing relative bg-[var(--card-bg)] rounded-xl border-4 border-[var(--carnelian-red)] ${isToday ? 'bg-[var(--card-today)] z-10' : ''}">
+                            
+                            ${isToday ? `<div onclick="openTodayPanel()" class="absolute -top-3 md:-top-4 left-1/2 transform -translate-x-1/2 bg-[var(--carnelian-red)] text-[#E9DCC9] px-3 py-1 fluid-text-sm font-bold tracking-widest rounded-full shadow-md z-20 flex items-center gap-1 whitespace-nowrap border-2 border-[var(--card-bg)] cursor-pointer hover:bg-[var(--ink-red)] hover:shadow-lg transition-all" title="探索「今日」與太陽的象徵"><span class="hieroglyph text-lg mt-0.5">𓇳</span> 神明誕辰日 <span class="text-xs font-mono opacity-90">(Mesut Neter)</span></div>` : ''}
+                            
+                            <div class="text-center border-b-2 border-[var(--carnelian-red)] pb-2 flex-shrink-0">
+                                <div class="hieroglyph fluid-h-xl mb-1 text-[var(--carnelian-red)] drop-shadow-sm">𓉔𓂋𓅱 𓆳</div>
+                                <h2 class="fluid-text-lg font-bold text-[var(--carnelian-red)] tracking-wide leading-tight">歲末五日 <span class="fluid-text-sm font-mono opacity-80">(Epagomenal Days)</span></h2>
+                            </div>
+                            
+                            <div class="flex-1 flex flex-col items-center justify-start pt-1.5 md:pt-2 pb-1 gap-2 md:gap-3 relative min-h-0">
+                                <div class="border border-[var(--border-color)] text-[var(--text-muted)] px-3 py-1 rounded-full fluid-text-sm font-mono tracking-widest flex items-center gap-2 flex-shrink-0">
+                                    <svg class="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    ${modernDateStr}
+                                </div>
+                                
+                                <div class="relative fluid-circle-outer flex items-center justify-center mx-auto flex-shrink-0 opacity-90 my-auto">
+                                    ${isToday ? `
+                                    <div class="absolute inset-0 rounded-full border-[4px] border-double border-[var(--carnelian-red)] opacity-80 pointer-events-none"></div>
+                                    <div class="absolute w-full h-full pointer-events-none transition-transform duration-1000 ease-linear z-20" id="boatWrapper-${dayId}">
+                                        <div onclick="toggleBoatPanel('${dayId}')" class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[85%] pointer-events-auto cursor-pointer hover:scale-125 transition-transform" id="boatInner-${dayId}" title="太陽船宇宙觀">
+                                            <span class="hieroglyph fluid-h-boat text-[var(--carnelian-red)] drop-shadow-md" id="boatIcon-${dayId}">𓊝</span>
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                    
+                                    <div class="fluid-circle-inner flex flex-col items-center justify-center z-10 transition-colors duration-500 relative">
+                                        <span class="hieroglyph fluid-h-xl text-[var(--ink-black)] drop-shadow-md mb-1 md:mb-2">${god.h_name}</span>
+                                        <h1 class="fluid-text-lg font-bold text-[var(--text-main)] leading-tight">${god.name} <span class="fluid-text-sm font-mono text-[var(--text-muted)]">(${god.pinyin})</span></h1>
+                                        <p class="fluid-text-xs text-[var(--text-muted)] mt-0.5 leading-none">${god.trans}</p>
+                                    </div>
+                                </div>
+
+                                ${isToday ? `
+                                <div id="timeInfoContainer-${dayId}" class="flex flex-col items-center gap-1 flex-shrink-0">
+                                    <div class="flex items-center gap-1.5 md:gap-2">
+                                        <span class="hieroglyph fluid-h-lg text-[var(--ink-black)] leading-none">𓃹𓈖𓏏</span>
+                                        <div id="hourLabelTrans-${dayId}" class="fluid-text-sm font-bold tracking-widest text-[var(--text-main)] leading-none">
+                                            白天 1 時 <span class="hieroglyph text-[var(--ink-black)]">𓇳</span>
+                                        </div>
+                                    </div>
+                                    <div class="fluid-text-xs text-[var(--text-muted)] tracking-widest leading-none mt-0.5" id="realTime-${dayId}">現世時間 00:00</div>
+                                </div>
+                                ` : '<div class="opacity-0 fluid-text-sm py-1 px-1 flex-shrink-0">&nbsp;</div>'}
+                            </div>
+                            
+                            <div onclick="toggleFestivalPanel('${dayId}')" class="border-t-2 border-[var(--carnelian-red)] pt-2 md:pt-3 text-center flex-shrink-0 cursor-pointer group rounded transition-colors hover:bg-[var(--shadow-color)] pb-1 relative z-10">
+                                <span class="hieroglyph fluid-h-lg text-[var(--carnelian-red)] leading-none group-hover:opacity-80 transition-opacity">𓎛𓃀𓎱</span>
+                                <p class="fluid-text-base font-bold text-[var(--carnelian-red)] mt-1 tracking-widest leading-snug group-hover:opacity-80 transition-opacity">${fest.trans} <span class="fluid-text-xs font-mono opacity-80">(${fest.name})</span></p>
+                            </div>
+
+                            <div id="panel-${dayId}" onclick="toggleFestivalPanel('${dayId}')" class="festival-panel absolute inset-x-0 bottom-0 top-[12%] md:top-[15%] bg-[var(--card-bg)]/95 backdrop-blur-sm border-t-[4px] border-[var(--carnelian-red)] rounded-t-2xl rounded-b-xl shadow-[0_-10px_30px_var(--shadow-color)] z-40 flex flex-col transition-all duration-300 ease-out cursor-pointer overflow-hidden">
+                                <button onclick="event.stopPropagation(); toggleFestivalPanel('${dayId}')" class="absolute top-3 right-3 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--ink-black)] text-[var(--papyrus)] flex items-center justify-center hover:opacity-80 transition z-50">
+                                    <svg class="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                                <div class="flex-1 p-4 md:p-5 text-center pointer-events-none flex flex-col panel-gap justify-center mt-2">
+                                    <span class="hieroglyph panel-h-icon text-[var(--carnelian-red)] drop-shadow-sm block">${fest.h_name}</span>
+                                    <div class="shrink-0">
+                                        <h2 class="panel-title font-bold text-[var(--text-main)] tracking-widest leading-tight">${fest.trans}</h2>
+                                        <p class="panel-desc text-[var(--text-muted)] font-mono tracking-wide">(${fest.name})</p>
+                                    </div>
+                                    <div class="shrink-0 mt-1">
+                                        <p class="panel-desc text-[var(--text-main)] font-medium text-justify px-2">${fest.desc}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="boat-panel-${dayId}" onclick="toggleBoatPanel('${dayId}')" class="boat-panel absolute inset-x-0 bottom-0 top-[10%] md:top-[12%] bg-[var(--card-bg)]/95 backdrop-blur-sm border-t-[4px] border-[var(--carnelian-red)] rounded-t-2xl rounded-b-xl shadow-[0_-10px_30px_var(--shadow-color)] z-40 flex flex-col transition-all duration-300 ease-out cursor-pointer overflow-hidden">
+                                <button onclick="event.stopPropagation(); toggleBoatPanel('${dayId}')" class="absolute top-3 right-3 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--ink-black)] text-[var(--papyrus)] flex items-center justify-center hover:opacity-80 transition z-50">
+                                    <svg class="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                                <div class="flex-1 p-2 md:p-3 text-center pointer-events-none flex flex-col panel-gap justify-center mt-2">
+                                    <h3 class="panel-desc font-bold text-[var(--text-muted)] tracking-widest border-b border-[var(--border-color)] pb-1 mb-0 shrink-0">古埃及宇宙觀</h3>
+                                    <div class="flex flex-col items-center shrink-0">
+                                        <span class="hieroglyph panel-h-icon text-[var(--carnelian-red)] drop-shadow-sm leading-none mt-1">𓊝</span>
+                                        <div class="flex items-baseline justify-center gap-1.5">
+                                            <span class="font-bold text-[var(--text-main)] panel-title tracking-widest">太陽船</span>
+                                            <span class="panel-desc text-[var(--text-muted)] font-mono">(Wia n Ra)</span>
+                                        </div>
+                                    </div>
+                                    <div class="shrink-0">
+                                        <p class="panel-desc text-[var(--text-main)] font-medium text-justify px-1">在古埃及的宇宙觀中，太陽神「拉」(Ra) 每日會乘坐太陽船橫越天際。白晝時乘坐「曼傑特」(Mandjet) 帶來光明與生機；日落後則換乘「麥塞克泰特」(Mesektet) 駛入冥界，與混沌之蛇「阿佩普」(Apep) 徹夜搏鬥。黎明時分的勝利，象徵著死而復生與宇宙秩序 (Maat) 的維持。</p>
+                                    </div>
+                                    <div class="shrink-0">
+                                        <h4 class="panel-desc font-bold text-[var(--text-main)] tracking-widest border-b border-dashed border-[var(--border-color)] pb-0.5 inline-block mb-1">晝夜與 24 時辰</h4>
+                                        <p class="panel-desc text-[var(--text-main)] font-medium text-justify px-1">古埃及是世界上最早將一天劃分出 24 小時的文明。他們將白晝與黑夜各分為 12 個時辰（𓃹𓈖𓏏，Unut）。這是會隨季節伸縮的「不等長時辰」。這 24 個時辰更是太陽船的航線圖。黑夜的 12 時辰對應冥界（Duat）的 12 道關卡。太陽神必須過關斬將，才能確保朝陽升起。</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                allCardsHTML += cardHTML;
+            }
+            container.innerHTML = allCardsHTML;
+        }
+
+        function updateThumbPosition() {
+            const val = slider.value;
+            const percent = ((val - 1) / 364) * 100;
+            visualThumb.style.left = `calc(${percent}%)`;
+            sliderDayText.innerText = val;
+            
+            visualThumb.style.transform = 'translate(-50%, -50%) scale(1.1)';
+            clearTimeout(visualThumb.scaleTimeout);
+            visualThumb.scaleTimeout = setTimeout(() => {
+                visualThumb.style.transform = 'translate(-50%, -50%) scale(1)';
+            }, 150);
+        }
+
+        function initFestivalList() {
+            const listContainer = document.getElementById('festivalListContainer');
+            let festivalListItems = [];
+            let seenFests = new Set();
+
+            for (let i = 1; i <= 360; i++) {
+                const fest = getFestivalForDay(i);
+                if (fest.key !== 'normal' && !seenFests.has(fest.key)) {
+                    seenFests.add(fest.key);
+                    festivalListItems.push({ day: i, fest: fest });
+                }
+            }
+            
+            festivalListItems.push({
+                day: 361,
+                fest: { h_name: "𓉔𓂋𓅱 𓆳", trans: "神明誕辰日", name: "Mesut Neter", color: "var(--carnelian-red)" }
+            });
+
+            let listHTML = '';
+            festivalListItems.forEach((item, index) => {
+                listHTML += `
+                    <div onclick="jumpToDay(${item.day})" class="flex justify-center py-3 md:py-4 cursor-pointer group transition-colors relative hover:bg-[var(--shadow-color)] rounded-lg w-full">
+                        <div class="flex items-center justify-center gap-4 md:gap-5 w-full">
+                            <div class="flex-1 flex justify-end items-center">
+                                <span class="hieroglyph text-2xl md:text-3xl transition-colors duration-300 leading-none" style="color: ${item.fest.color};">${item.fest.h_name}</span>
+                            </div>
+                            <div class="flex-1 flex flex-col justify-center items-start text-left">
+                                <span class="font-bold text-[var(--text-main)] group-hover:text-[var(--ink-red)] transition-colors text-sm md:text-base tracking-widest leading-tight mb-0.5 md:mb-1">
+                                    ${item.fest.trans}
+                                </span>
+                                <span class="text-[10px] md:text-xs text-[var(--text-muted)] font-mono leading-none opacity-90">
+                                    (${item.fest.name})
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                if (index < festivalListItems.length - 1) {
+                    listHTML += `<div class="w-[80%] h-[1px] bg-[var(--border-color)] mx-auto opacity-40 shrink-0"></div>`;
+                }
+            });
+            listContainer.innerHTML = listHTML;
+
+            listContainer.addEventListener('scroll', updateScrollIndicator);
+            setTimeout(updateScrollIndicator, 100);
+        }
+
+        window.updateScrollIndicator = function() {
+            const listContainer = document.getElementById('festivalListContainer');
+            const indicator = document.getElementById('scrollIndicator');
+            const iconPath = document.getElementById('scrollIcon').querySelector('path');
+
+            if (!listContainer || !indicator) return;
+
+            if (listContainer.scrollHeight <= listContainer.clientHeight) {
+                indicator.style.opacity = 0;
+                return;
+            }
+            
+            indicator.style.opacity = 1;
+            
+            const isAtBottom = Math.abs(listContainer.scrollHeight - listContainer.clientHeight - listContainer.scrollTop) < 2;
+            
+            if (isAtBottom) {
+                iconPath.setAttribute('d', 'M5 10l7-7m0 0l7 7m-7-7v18');
+            } else {
+                iconPath.setAttribute('d', 'M19 14l-7 7m0 0l7 7m7 7V3');
+            }
+        };
+
+        function renderTimelineTrack() {
+            let blocks = [];
+            let currentFestColor = null;
+            let blockStartDay = 1;
+
+            const getColorForDay = (day) => {
+                if (day > 360) return 'var(--carnelian-red)';
+                const fest = getFestivalForDay(day);
+                return fest.key === 'normal' ? 'transparent' : fest.color;
+            };
+
+            currentFestColor = getColorForDay(1);
+
+            for (let i = 2; i <= 365; i++) {
+                let color = getColorForDay(i);
+                if (color !== currentFestColor) {
+                    blocks.push({ color: currentFestColor, startDay: blockStartDay, endDay: i - 1 });
+                    currentFestColor = color;
+                    blockStartDay = i;
+                }
+            }
+            blocks.push({ color: currentFestColor, startDay: blockStartDay, endDay: 365 });
+
+            let gradientStops = blocks.map(b => {
+                let startPoint = b.startDay - 0.5;
+                let endPoint = b.endDay + 0.5;
+                let startPct = Math.max(0, ((startPoint - 1) / 364) * 100);
+                let endPct = Math.min(100, ((endPoint - 1) / 364) * 100);
+                return `${b.color} ${startPct}%, ${b.color} ${endPct}%`;
+            }).join(', ');
+
+            const track = document.getElementById('timelineTrack');
+            track.style.backgroundImage = `linear-gradient(to right, ${gradientStops})`;
+        }
+
+        /* --- 滑塊的連按兩下 (Double Tap) 偵測邏輯 --- */
+        let lastTapTime = 0;
+
+        function handleDoubleTap(e) {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTapTime;
+            
+            // 只要在 400 毫秒內連續觸發兩次，就算雙擊（即使有移動也算）
+            if (tapLength < 400 && tapLength > 0) {
+                openScarabPanel();
+            }
+            lastTapTime = currentTime;
+        }
+
+        slider.addEventListener('mousedown', handleDoubleTap);
+        slider.addEventListener('touchstart', handleDoubleTap, {passive: true});
+
+        slider.addEventListener('input', (e) => {
+            isSliding = true;
+            updateThumbPosition();
+            const targetCard = document.getElementById(`day-${parseInt(e.target.value)}`);
+            if (targetCard) targetCard.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+        });
+
+        slider.addEventListener('change', () => { isSliding = false; });
+
+        // 捲動偵測 (忽略首尾的 Padding Cards)
+        container.addEventListener('scroll', () => {
+            if (isSliding) return; 
+            
+            const containerCenter = container.getBoundingClientRect().left + container.clientWidth / 2;
+            let closestDay = parseInt(slider.value);
+            let minDistance = Infinity;
+
+            for (let i = 1; i <= 365; i++) {
+                const el = document.getElementById(`day-${i}`);
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    const elCenter = rect.left + rect.width / 2;
+                    const dist = Math.abs(elCenter - containerCenter);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        closestDay = i;
+                    }
+                }
+            }
+
+            if (parseInt(slider.value) !== closestDay) {
+                slider.value = closestDay;
+                updateThumbPosition();
+            }
+        });
+
+        function scrollToToday() {
+            if(todayElementId) {
+                const el = document.getElementById(todayElementId);
+                el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                slider.value = todayDayIndex;
+                updateThumbPosition();
+            }
+        }
+
+        function updateSolarBoatTracker() {
+            const now = new Date();
+            const h = now.getHours();
+            const m = now.getMinutes();
+            
+            const isDayTime = (h >= 6 && h < 18);
+            if (!manualTheme) {
+                if (isDayTime) document.body.classList.remove('dark-mode');
+                else document.body.classList.add('dark-mode');
+            }
+
+            if (!todayElementId) return;
+
+            const decimalHours = h + (m / 60);
+            const angle = (decimalHours - 12) * 15;
+
+            const boatWrapper = document.getElementById(`boatWrapper-${todayElementId}`);
+            const transLabel = document.getElementById(`hourLabelTrans-${todayElementId}`);
+            const realTime = document.getElementById(`realTime-${todayElementId}`);
+
+            if (boatWrapper && transLabel && realTime) {
+                boatWrapper.style.transform = `rotate(${angle}deg)`;
+                realTime.innerText = `現世時間 ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+                let minsFromSunrise = (h * 60 + m) - (6 * 60);
+                if (minsFromSunrise < 0) minsFromSunrise += 24 * 60; 
+                const hourIndex = Math.floor(minsFromSunrise / 60) + 1; 
+                
+                if (isDayTime) {
+                    transLabel.innerHTML = `白天 ${hourIndex} 時 <span class="hieroglyph text-[var(--ink-black)]">𓇳</span>`;
+                } else {
+                    const nightHour = hourIndex > 12 ? hourIndex - 12 : hourIndex;
+                    transLabel.innerHTML = `晚上 ${nightHour} 時 <span class="hieroglyph text-[var(--ink-black)]">𓇽</span>`;
+                }
+            }
+        }
+
+        renderYear();
+        renderTimelineTrack();
+        initFestivalList();
+        setTimeout(scrollToToday, 200);
+        setInterval(updateSolarBoatTracker, 30000); 
+        updateSolarBoatTracker(); 
+
+    </script>
+</body>
+</html>
