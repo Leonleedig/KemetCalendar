@@ -311,7 +311,7 @@
                 </div>
             </div>
             <div class="shrink-0 flex flex-col gap-2">
-                <p class="fluid-desc text-[var(--text-main)] font-medium text-justify px-1">古埃及的數學採用「<strong class="text-[var(--ink-black)]">十進位制</strong>」，但他們並沒有「零」的概念。他們透過「重複畫出符號」來表示特定數值。<br><br>最基本的單位是一根代表 1 的木棍「<strong class="text-[var(--ink-black)]">𓏺</strong>」，而 10 則用代表束縛牛隻的繩套「<strong class="text-[var(--ink-black)]">𓎆</strong>」來表示。<br><br><strong class="text-[var(--ink-black)]">排版規律與幾何美感：</strong><br>為了節省書寫空間並追求神廟銘文的方塊美感，古埃及人不會將相同的符號排成一長串。例如數字 7 不會寫成平行的七根棍子，而是疊成「<strong class="text-[var(--ink-black)]">𓏿</strong>」。當十位數與個位數同時存在時（例如 24），會將兩個十寫在前面或上方，緊接著四個一「<strong class="text-[var(--ink-black)]">𓎇𓏼</strong>」，形成嚴謹而優美的幾何矩陣。</p>
+                <p class="fluid-desc text-[var(--text-main)] font-medium text-justify px-1">古埃及的數學採用「<strong class="text-[var(--ink-black)]">十進位制</strong>」，但他們並沒有「零」的概念。他們透過「重複畫出符號」來表示特定數值。<br><br>最基本的單位是一根代表 1 的木棍「<strong class="text-[var(--ink-black)]">𓏺</strong>」，而 10 則用代表束縛牛隻的繩套「<strong class="text-[var(--ink-black)]">𓎆</strong>」來表示。<br><br><strong class="text-[var(--ink-black)]">排版規律與幾何美感：</strong><br>為了節省書寫空間並追求神廟銘文的方塊美感，古埃及人不會將相同的符號排成一長串。例如數字 7 會寫成「<strong class="text-[var(--ink-black)]">𓏿</strong>」。當十位數與個位數同時存在時（例如 24），會將兩個十寫在前面或上方，緊接著四個一「<strong class="text-[var(--ink-black)]">𓎇𓏼</strong>」，形成嚴謹而優美的幾何矩陣。</p>
             </div>
         </div>
     </div>
@@ -505,6 +505,27 @@
             }
         };
 
+        function generateClockTicks(color) {
+            let html = '<div class="absolute inset-0 pointer-events-none z-10">';
+            for (let h = 0; h < 24; h++) {
+                // 12點在最上方 (0度), 6點在最左側 (-90度), 18點在最右側 (90度)
+                const angle = (h - 12) * 15; 
+                const isHorizon = (h === 6 || h === 18); // 最左與最右 (日出與日落)
+                
+                // 短橫線在旋轉前需為直向 (w-2 h-8)，旋轉90度後即變為指向圓心的短橫線
+                const styleClass = isHorizon ? 'w-[2px] h-[8px] rounded-[1px] opacity-70' : 'w-[4px] h-[4px] rounded-full opacity-40';
+                const marginTop = isHorizon ? '5px' : '7px'; // 微調使其中心對齊並緊貼內緣
+                
+                html += `
+                    <div class="absolute inset-0 flex justify-center" style="transform: rotate(${angle}deg);">
+                        <div class="${styleClass}" style="background-color: ${color}; margin-top: ${marginTop};"></div>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            return html;
+        }
+
         function renderYear() {
             let allCardsHTML = '';
             // 為了實現邊界無縫感，i 從 -1 到 367 (渲染去年最後2天與明年最前2天的 Padding 卡片)
@@ -554,9 +575,10 @@
                                 <div class="relative fluid-circle-outer flex items-center justify-center mx-auto flex-shrink-0 my-auto">
                                     ${isToday ? `
                                     <div class="absolute inset-0 rounded-full border-[4px] border-double border-[var(--ink-black)] opacity-80 pointer-events-none"></div>
+                                    ${generateClockTicks('var(--ink-black)')}
                                     <div class="absolute w-full h-full pointer-events-none transition-transform duration-1000 ease-linear z-20" id="boatWrapper-${dayId}">
                                         <div onclick="toggleBoatPanel('${dayId}')" class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[85%] pointer-events-auto cursor-pointer hover:scale-125 transition-transform" id="boatInner-${dayId}" title="太陽船宇宙觀">
-                                            <span class="hieroglyph fluid-h-boat text-[var(--ink-black)] drop-shadow-md" id="boatIcon-${dayId}">𓊝</span>
+                                            <span class="hieroglyph fluid-h-boat text-[var(--ink-black)] drop-shadow-md" id="boatIcon-${dayId}">𓊟</span>
                                         </div>
                                     </div>
                                     ` : ''}
@@ -645,7 +667,7 @@
                                 <div class="flex-1 p-2 md:p-3 text-center pointer-events-none flex flex-col panel-gap justify-center mt-2">
                                     <h3 class="panel-desc font-bold text-[var(--text-muted)] tracking-widest border-b border-[var(--border-color)] pb-1 mb-0 shrink-0">古埃及宇宙觀</h3>
                                     <div class="flex flex-col items-center shrink-0">
-                                        <span class="hieroglyph panel-h-icon text-[var(--ink-black)] drop-shadow-sm leading-none mt-1">𓊝</span>
+                                        <span class="hieroglyph panel-h-icon text-[var(--ink-black)] drop-shadow-sm leading-none mt-1">𓊟</span>
                                         <div class="flex items-baseline justify-center gap-1.5">
                                             <span class="font-bold text-[var(--text-main)] panel-title tracking-widest">太陽船</span>
                                             <span class="panel-desc text-[var(--text-muted)] font-mono">(Wia n Ra)</span>
@@ -701,9 +723,10 @@
                                 <div class="relative fluid-circle-outer flex items-center justify-center mx-auto flex-shrink-0 opacity-90 my-auto">
                                     ${isToday ? `
                                     <div class="absolute inset-0 rounded-full border-[4px] border-double border-[var(--carnelian-red)] opacity-80 pointer-events-none"></div>
+                                    ${generateClockTicks('var(--carnelian-red)')}
                                     <div class="absolute w-full h-full pointer-events-none transition-transform duration-1000 ease-linear z-20" id="boatWrapper-${dayId}">
                                         <div onclick="toggleBoatPanel('${dayId}')" class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[85%] pointer-events-auto cursor-pointer hover:scale-125 transition-transform" id="boatInner-${dayId}" title="太陽船宇宙觀">
-                                            <span class="hieroglyph fluid-h-boat text-[var(--carnelian-red)] drop-shadow-md" id="boatIcon-${dayId}">𓊝</span>
+                                            <span class="hieroglyph fluid-h-boat text-[var(--carnelian-red)] drop-shadow-md" id="boatIcon-${dayId}">𓊟</span>
                                         </div>
                                     </div>
                                     ` : ''}
@@ -756,7 +779,7 @@
                                 <div class="flex-1 p-2 md:p-3 text-center pointer-events-none flex flex-col panel-gap justify-center mt-2">
                                     <h3 class="panel-desc font-bold text-[var(--text-muted)] tracking-widest border-b border-[var(--border-color)] pb-1 mb-0 shrink-0">古埃及宇宙觀</h3>
                                     <div class="flex flex-col items-center shrink-0">
-                                        <span class="hieroglyph panel-h-icon text-[var(--carnelian-red)] drop-shadow-sm leading-none mt-1">𓊝</span>
+                                        <span class="hieroglyph panel-h-icon text-[var(--carnelian-red)] drop-shadow-sm leading-none mt-1">𓊟</span>
                                         <div class="flex items-baseline justify-center gap-1.5">
                                             <span class="font-bold text-[var(--text-main)] panel-title tracking-widest">太陽船</span>
                                             <span class="panel-desc text-[var(--text-muted)] font-mono">(Wia n Ra)</span>
