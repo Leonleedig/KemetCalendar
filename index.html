@@ -410,26 +410,35 @@
         const baseDate = new Date(2022, 3, 18); 
         baseDate.setHours(0, 0, 0, 0);
         
-        const now = new Date();
-        const todayAtMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
-        const diffTime = todayAtMidnight - baseDate;
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        
-        let daysSinceBase = diffDays;
-        if (daysSinceBase < 0) {
-            const offsetYears = Math.ceil(Math.abs(daysSinceBase) / 365);
-            daysSinceBase += offsetYears * 365;
-        }
-        
-        const ancientYearsSinceBase = Math.floor(diffDays / 365);
-        let currentDayIndex = (daysSinceBase % 365) + 1;
-        
-        const todayDayIndex = currentDayIndex;
-        let todayElementId = `day-${Math.min(365, todayDayIndex)}`;
+        // 將原本的常數改為變數，以便跨日可以重新計算
+        let diffDays, daysSinceBase, ancientYearsSinceBase, currentDayIndex, todayDayIndex, todayElementId, startOfYear;
+        let lastCheckedDate = new Date().getDate(); // 記錄當前日期，用於比對是否跨日
 
-        let startOfYear = new Date(baseDate);
-        startOfYear.setDate(baseDate.getDate() + (ancientYearsSinceBase * 365));
+        // 將計算今日日期的邏輯打包成函數
+        function calculateTodayInfo() {
+            const now = new Date();
+            const todayAtMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const diffTime = todayAtMidnight - baseDate;
+            
+            diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            daysSinceBase = diffDays;
+            
+            if (daysSinceBase < 0) {
+                const offsetYears = Math.ceil(Math.abs(daysSinceBase) / 365);
+                daysSinceBase += offsetYears * 365;
+            }
+            
+            ancientYearsSinceBase = Math.floor(diffDays / 365);
+            currentDayIndex = (daysSinceBase % 365) + 1;
+            todayDayIndex = currentDayIndex;
+            todayElementId = `day-${Math.min(365, todayDayIndex)}`;
+
+            startOfYear = new Date(baseDate);
+            startOfYear.setDate(baseDate.getDate() + (ancientYearsSinceBase * 365));
+        }
+
+        // 初始載入時執行一次計算
+        calculateTodayInfo();
         
         let isSliding = false; 
         let manualTheme = false;
@@ -991,8 +1000,18 @@
 
         function updateSolarBoatTracker() {
             const now = new Date();
+            
+            // 【新增】午夜換日偵測邏輯
+            if (now.getDate() !== lastCheckedDate) {
+                lastCheckedDate = now.getDate();
+                calculateTodayInfo();           // 1. 重新計算今日索引與日期
+                renderYear();                   // 2. 重新渲染整年卡片（將太陽船與標記移至新卡片）
+                setTimeout(scrollToToday, 200); // 3. 視覺自動滾動到新的一天
+            }
+
             const h = now.getHours();
             const m = now.getMinutes();
+            const s = now.getSeconds(); // 新增抓取秒數
             
             const isDayTime = (h >= 6 && h < 18);
             if (!manualTheme) {
@@ -1002,7 +1021,8 @@
 
             if (!todayElementId) return;
 
-            const decimalHours = h + (m / 60);
+            // 將秒數 (s / 3600) 加入小數點小時的計算，讓太陽船達成極致平滑的航行
+            const decimalHours = h + (m / 60) + (s / 3600);
             const angle = (decimalHours - 12) * 15;
 
             const boatWrapper = document.getElementById(`boatWrapper-${todayElementId}`);
@@ -1030,7 +1050,8 @@
         renderTimelineTrack();
         initFestivalList();
         setTimeout(scrollToToday, 200);
-        setInterval(updateSolarBoatTracker, 30000); 
+        // 將更新頻率從 30 秒改為每 10 秒 (10000 毫秒) 更新一次
+        setInterval(updateSolarBoatTracker, 10000); 
         updateSolarBoatTracker(); 
 
     </script>
