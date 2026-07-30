@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kemet Watch Face</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* 白天模式 */
+            --watch-bg: #EFE4CF;
+            --watch-gradient: radial-gradient(circle at center, #F8F2E4 0%, var(--watch-bg) 100%);
+            --bezel-color: #D5C4A1;
+            --track-inner: rgba(107, 92, 67, 0.5);
+            --tick-color: #6b5c43;
+            --text-main: #1A1A1A;
+            --text-dim: #6b7280;
+            --gold-accent: #D4AF37;
+            --lapis-blue: #192A56;
+            --carnelian-red: #A32020;
+            --sun-glow: rgba(212, 175, 55, 0.6);
+            --fest-panel-bg: rgba(239, 228, 207, 0.95);
+        }
+
+        .is-night {
+            /* 黑夜模式 */
+            --watch-bg: #1a1e24;
+            --watch-gradient: radial-gradient(circle at center, #2a313d 0%, var(--watch-bg) 100%);
+            --bezel-color: #111827;
+            --track-inner: rgba(212, 175, 55, 0.3);
+            --tick-color: #D4AF37;
+            --text-main: #E9DCC9;
+            --text-dim: #9ca3af;
+            --gold-accent: #F5D061;
+            --lapis-blue: #4A69BD;
+            --carnelian-red: #FF6B6B;
+            --sun-glow: rgba(74, 105, 189, 0.4);
+            --fest-panel-bg: rgba(26, 30, 36, 0.95);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Noto Serif TC', serif;
+            overflow: hidden;
+            /* 抑制全域文字反白選取 */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .hieroglyph {
+            font-family: 'Noto Sans Egyptian Hieroglyphs', sans-serif;
+            font-weight: normal;
+            line-height: 1;
+        }
+
+        .watch-bezel {
+            width: clamp(300px, 85vw, 380px);
+            height: clamp(300px, 85vw, 380px);
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 
+                0 0 0 14px var(--bezel-color),
+                0 10px 30px rgba(0,0,0,0.8);
+            overflow: hidden; 
+            background: #000;
+        }
+
+        /* 水平滾動容器 */
+        .watch-carousel {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
+        }
+        .watch-carousel::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* 單一日期面盤卡片 */
+        .watch-face-card {
+            flex: 0 0 100%;
+            width: 100%;
+            height: 100%;
+            scroll-snap-align: center;
+            position: relative;
+            background: var(--watch-gradient);
+            transition: background 1s ease;
+        }
+
+        /* 雙線軌道 (外軌) */
+        .orbit-track-outer {
+            position: absolute;
+            top: 5%; left: 5%; width: 90%; height: 90%;
+            border-radius: 50%;
+            border: 1px solid var(--track-inner);
+            pointer-events: none;
+        }
+
+        /* 雙線軌道 (內軌) */
+        .orbit-track-inner {
+            position: absolute;
+            top: 9%; left: 9%; width: 82%; height: 82%;
+            border-radius: 50%;
+            border: 1px solid var(--track-inner);
+            pointer-events: none;
+        }
+
+        .boat-arm {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            transition: transform 0.5s cubic-bezier(0.4, 0.0, 0.2, 1);
+            will-change: transform;
+        }
+
+        /* 將船精準定位在 7% (內外軌道的正中央) */
+        .boat-icon {
+            position: absolute;
+            top: 7%; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.8rem;
+            color: var(--carnelian-red);
+            text-shadow: 0 0 8px var(--sun-glow);
+            transition: color 1s ease, text-shadow 1s ease;
+        }
+
+        .not-today .boat-arm { display: none; }
+
+        /* 中央資訊區 (設定 pointer-events: none 讓空白處的點擊可以穿透到背景) */
+        .center-complication {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            width: 75%; height: 75%;
+            z-index: 10;
+            pointer-events: none; 
+        }
+
+        /* 讓需要點擊的目標物恢復事件接收 */
+        .pointer-events-auto {
+            pointer-events: auto;
+        }
+
+        .interactive-date {
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: background 0.3s ease;
+        }
+        
+        .has-festival {
+            position: relative;
+        }
+        .has-festival::after {
+            content: '•';
+            color: var(--carnelian-red);
+            font-size: 1.5rem;
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            line-height: 0;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.5; transform: translateX(-50%) scale(1.2); }
+            100% { opacity: 1; transform: translateX(-50%) scale(1); }
+        }
+
+        .egyptian-numbers {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap-reverse;
+            color: var(--text-main);
+            font-size: 2rem;
+            line-height: 0.9;
+        }
+
+        .festival-panel {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            width: 95%; height: 95%;
+            background: var(--fest-panel-bg);
+            backdrop-filter: blur(8px);
+            border-radius: 50%;
+            border: 2px solid var(--track-inner);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 50;
+            pointer-events: none;
+            cursor: pointer;
+        }
+
+        .festival-panel.is-open {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .panel-content {
+            overflow-y: auto;
+            width: 100%; max-height: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .panel-content::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body id="appBody">
+
+    <div class="watch-bezel">
+        <div class="watch-carousel" id="carousel">
+            <!-- 錶面由 JS 動態生成 -->
+        </div>
+
+        <div id="festivalPanel" class="festival-panel" onclick="closePanel()">
+            <div class="panel-content">
+                <span id="panelHiero" class="hieroglyph text-4xl block mb-2 drop-shadow-sm text-[var(--carnelian-red)]"></span>
+                <h3 id="panelTitle" class="font-bold text-[var(--text-main)] text-sm tracking-widest mb-2 border-b border-[var(--text-dim)] pb-1 px-4"></h3>
+                <p id="panelDesc" class="text-[var(--text-main)] text-xs text-center leading-relaxed px-2"></p>
+                <div class="text-[var(--text-dim)] opacity-60 text-[10px] mt-4 tracking-widest">點擊任意處關閉</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 核心資料庫 ---
+        const festivalData = {
+            "wepet-renpet": { h_name: "𓄋𓊪𓏏𓆳𓏏", trans: "開年節", color: "var(--gold-accent)", desc: "慶祝天狼星偕日升與尼羅河開始氾濫。代表舊的一年結束與新生命的復甦，是最歡樂的新年慶典。" },
+            "wag": { h_name: "𓍯𓎼𓎛𓃀𓎱", trans: "瓦格節", color: "var(--carnelian-red)", desc: "祭祖節日，專門祭祀亡者與冥王奧西里斯。家家戶戶會製作蘆葦小船放入尼羅河中，引導亡魂前行。" },
+            "thoth": { h_name: "𓅤𓎛𓃀𓎱", trans: "托特節", color: "var(--lapis-blue)", desc: "獻給智慧、書記與月亮之神托特的節日。祈求智慧與知識的庇佑。" },
+            "drunkenness": { h_name: "𓉡𓎛𓃀𓎱", trans: "哈索爾醉酒節", color: "var(--carnelian-red)", desc: "為了安撫差點毀滅人類的母獅神（化為溫暖的哈索爾），民眾在這天會大量飲酒、聽音樂狂歡。" },
+            "opet": { h_name: "𓇋𓊪𓏏𓎛𓃀𓎱", trans: "奧佩特節", color: "var(--carnelian-red)", desc: "底比斯最盛大的水上嘉年華。阿蒙神的神像會被請上神聖駁船，沿著尼羅河遊行到盧克索神廟。" },
+            "khoiak": { h_name: "𓂓𓄿𓁷𓂋𓂓𓄿", trans: "科伊亞克節", color: "var(--gold-accent)", desc: "全國性的神蹟劇，重演奧西里斯死亡到復活的神話。農民會種下「奧西里斯麥床」，其發芽象徵死而復生。" },
+            "sokar": { h_name: "𓊃𓎡𓂋𓎛𓃀𓎱", trans: "索卡爾節", color: "var(--lapis-blue)", desc: "與孟菲斯冥界神索卡爾相關的祭典。法老會親自牽引裝載著神聖石塊的太陽船在沙漠中遊行。" },
+            "nehebkau": { h_name: "𓈖𓎛𓃀𓂓𓅱𓎛𓃀𓎱", trans: "內赫布考節", color: "var(--gold-accent)", desc: "慶祝靈魂與肉體重新結合、萬物復甦的節日。內赫布考是一條守護神蛇，負責綁定靈魂與身體。" },
+            "mut": { h_name: "𓏏𓅐𓎛𓃀𓎱", trans: "姆特女神節", color: "var(--lapis-blue)", desc: "底比斯姆特女神的專屬慶典。女神的神像會乘船航行於聖湖上，象徵宇宙秩序的延續與生育的祝福。" },
+            "renenutet": { h_name: "𓂋𓈖𓈖𓏏𓆗𓎛𓃀𓎱", trans: "列涅努泰特節", color: "var(--gold-accent)", desc: "農民會將第一批初長成的麥穗與美酒獻給掌管糧倉的蛇之女神，祈求即將到來的收割季節大豐收。" },
+            "min": { h_name: "𓋉𓈖𓎛𓃀𓎱", trans: "敏神節", color: "var(--carnelian-red)", desc: "慶祝豐收與生殖神的遊行。法老會親自出席揮動鐮刀割下第一把麥穗，祈求土地與人民的豐饒。" },
+            "valley": { h_name: "𓎛𓃀𓎱𓄤𓈖𓇋𓈖𓏏", trans: "山谷美麗節", color: "var(--lapis-blue)", desc: "古埃及的掃墓嘉年華。活人會帶著大量啤酒渡河來到西岸墓區，在祖先的墓室前野餐共飲團聚。" },
+            "reunion": { h_name: "𓎛𓃀𓎱𓄤𓈖𓋴𓌖𓐍𓈖𓏏", trans: "美麗相聚節", color: "var(--carnelian-red)", desc: "哈索爾女神的神像乘船順流而下前往埃德富與丈夫荷魯斯相聚。整個節期長達 14 天徹夜狂歡。" },
+            "ptah": { h_name: "𓊪𓏏𓎛", trans: "普塔節", color: "var(--lapis-blue)", desc: "孟菲斯創世神、工匠之神普塔的祭典。象徵創造力與工藝的祝福，以及世界秩序的建立。" },
+            "hapi-amun": { h_name: "𓎛𓂝𓊪𓇋𓈗", trans: "哈皮與阿蒙節", color: "var(--gold-accent)", desc: "慶祝尼羅河神哈皮與底比斯主神阿蒙的節日，祈求豐沛的河水滋養埃及大地。" },
+            "min-growth": { h_name: "𓋉𓈖", trans: "敏的生長節", color: "var(--gold-accent)", desc: "敏神的衍生豐饒節日，象徵植物與生命的蓬勃生長與自然生機。" },
+            "maat": { h_name: "𓌷𓂝𓏏", trans: "瑪特節", color: "var(--lapis-blue)", desc: "獻給真理與秩序女神瑪特的節日。這一天提醒人們遵循宇宙的和諧與道德準則。" },
+            "bastet": { h_name: "𓃀𓄿𓋴𓏏𓏏", trans: "芭絲特節", color: "var(--carnelian-red)", desc: "貓首女神芭絲特的狂歡節。人們會乘船遊行、暢飲、演奏音樂，是古埃及最熱鬧的節日之一。" },
+            "anubis": { h_name: "𓇋𓈖𓊪𓅱", trans: "阿努比斯節", color: "var(--lapis-blue)", desc: "祭祀冥界防腐神與亡者守護神阿努比斯的莊嚴節日，引導並守護亡魂前往來世。" },
+            "epagomenal": { h_name: "𓉔𓂋𓅱 𓆳", trans: "歲末神明誕辰", color: "var(--carnelian-red)", desc: "這是一年當中最神聖且充滿魔法的「歲末五日」，慶祝五位神祇的誕生。古埃及人會暫停工作並祈求平安。"},
+            "normal": { h_name: "𓎛𓂋𓅱𓄤", trans: "平靜之日", color: "var(--text-main)", desc: "今日並無皇家慶典。遵循「瑪亞特」和諧度過。" }
+        };
+
+        const infoData = {
+            boat: { h_name: "𓊟", trans: "太陽船 (Wia n Ra)", desc: "在古埃及宇宙觀中，太陽神每日乘坐太陽船橫越天際。白晝帶來光明與生機；日落駛入冥界與混沌搏鬥。黎明時分的勝利，象徵著死而復生與宇宙秩序的維持。", color: "var(--carnelian-red)" },
+            sun: { h_name: "𓇳", trans: "太陽與今日 (Ra & Mjn)", desc: "圓圈中間帶一點的符號代表太陽神「拉」，也是代表「日子」的限定符。把握「今日」，就是在太陽神凝視下，體驗宇宙的和諧運行。", color: "var(--gold-accent)" },
+            night: { h_name: "𓇽", trans: "夜空星辰 (Nut)", desc: "黑夜降臨，太陽船駛入天空女神努特的身軀，進入滿佈星辰的冥界。這十二個時辰象徵著太陽神重生的重重考驗。", color: "var(--lapis-blue)" }
+        };
+
+        function getFestivalForDay(dayIndex) {
+            if (dayIndex > 360) return { key: "epagomenal", ...festivalData["epagomenal"] };
+            if (dayIndex === 1) return { key: "wepet-renpet", ...festivalData["wepet-renpet"] };
+            if (dayIndex === 15) return { key: "hapi-amun", ...festivalData["hapi-amun"] };
+            if (dayIndex >= 17 && dayIndex <= 18) return { key: "wag", ...festivalData["wag"] };
+            if (dayIndex === 19) return { key: "thoth", ...festivalData["thoth"] };
+            if (dayIndex === 20) return { key: "drunkenness", ...festivalData["drunkenness"] };
+            if (dayIndex >= 45 && dayIndex <= 55) return { key: "opet", ...festivalData["opet"] }; 
+            if (dayIndex === 75) return { key: "min-growth", ...festivalData["min-growth"] };
+            if (dayIndex === 81) return { key: "maat", ...festivalData["maat"] };
+            if (dayIndex >= 102 && dayIndex <= 115) return { key: "khoiak", ...festivalData["khoiak"] }; 
+            if (dayIndex === 116) return { key: "sokar", ...festivalData["sokar"] }; 
+            if (dayIndex >= 117 && dayIndex <= 120) return { key: "khoiak", ...festivalData["khoiak"] }; 
+            if (dayIndex === 121) return { key: "nehebkau", ...festivalData["nehebkau"] }; 
+            if (dayIndex === 140) return { key: "mut", ...festivalData["mut"] }; 
+            if (dayIndex === 181) return { key: "ptah", ...festivalData["ptah"] };
+            if (dayIndex === 211) return { key: "renenutet", ...festivalData["renenutet"] }; 
+            if (dayIndex === 214) return { key: "bastet", ...festivalData["bastet"] };
+            if (dayIndex === 250) return { key: "anubis", ...festivalData["anubis"] };
+            if (dayIndex === 251) return { key: "min", ...festivalData["min"] }; 
+            if (dayIndex >= 271 && dayIndex <= 272) return { key: "valley", ...festivalData["valley"] }; 
+            if (dayIndex >= 301 && dayIndex <= 314) return { key: "reunion", ...festivalData["reunion"] }; 
+            if (dayIndex === 354) return { key: "ptah", ...festivalData["ptah"] };
+            return { key: "normal", ...festivalData["normal"] };
+        }
+
+        function toEgyptianNumeral(num) {
+            if (num === 0) return `<span class="opacity-30 text-[1rem]">𓄤</span>`;
+            const units = ["", "𓏺", "𓏻", "𓏼", "𓏽", "𓏾", "𓏿", "𓐀", "𓐁", "𓐂"];
+            const tens = ["", "𓎆", "𓎇", "𓎈", "𓎉", "𓎊", "𓎋"];
+            let result = "";
+            let t = Math.floor(num / 10);
+            let u = num % 10;
+            if (t > 0) result += tens[t];
+            if (u > 0) result += units[u];
+            return result;
+        }
+
+        // 換算古埃及日期為專屬的「月/季/日」文字組合
+        function getEgyptianDateHieroglyphs(dayIndex) {
+            if (dayIndex > 360) {
+                return "𓉔𓂋𓅱𓏤𓆳𓏏𓊪𓏏"; // 歲末五日 (Heriu-renpet)
+            }
+            
+            const monthIndex = Math.floor((dayIndex - 1) / 30); 
+            const dayOfMonth = ((dayIndex - 1) % 30) + 1;
+            
+            const seasonIndex = Math.floor(monthIndex / 4); 
+            const monthOfSeason = (monthIndex % 4) + 1;
+            
+            const seasons = ["𓄡𓏏𓇳", "𓉐𓂋𓏏𓇳", "𓈙𓈗𓇳"]; // 泛濫季, 播種季, 收穫季
+            
+            // 組合格式：月 + 數字 + 季節 + 日 + 數字
+            return `𓇹 ${toEgyptianNumeral(monthOfSeason)} ${seasons[seasonIndex]} 𓇳 ${toEgyptianNumeral(dayOfMonth)}`;
+        }
+
+        // 產生精準嵌合於雙線軌道之間的圓點與短線
+        function generateTicks() {
+            let html = '<div class="absolute inset-0 pointer-events-none z-0">';
+            for (let h = 0; h < 24; h++) {
+                const angle = (h - 12) * 15; 
+                const isHorizon = (h === 6 || h === 18);
+                
+                if (isHorizon) {
+                    // 日出落短線：長度 5%，微凸出內外軌道，形成十字瞄準感
+                    html += `
+                        <div class="absolute inset-0 flex justify-center" style="transform: rotate(${angle}deg);">
+                            <div class="w-[2px] opacity-80 bg-[var(--tick-color)]" style="position: absolute; top: 4.5%; height: 5%;"></div>
+                        </div>
+                    `;
+                } else {
+                    // 普通時辰：直徑 4px 的圓點，精準定位於 7% 軌道中心
+                    html += `
+                        <div class="absolute inset-0 flex justify-center" style="transform: rotate(${angle}deg);">
+                            <div class="w-[4px] h-[4px] rounded-full opacity-100 bg-[var(--tick-color)]" style="position: absolute; top: calc(7% - 2px);"></div>
+                        </div>
+                    `;
+                }
+            }
+            html += '</div>';
+            return html;
+        }
+
+        const baseDate = new Date(2022, 3, 18); 
+        baseDate.setHours(0, 0, 0, 0);
+        
+        let renderRange = 182; 
+        let todayDayIndex = 1;
+        let todayRealDate = new Date();
+
+        function initCalendar() {
+            const now = new Date();
+            const diffDays = Math.floor((now - baseDate) / (1000 * 60 * 60 * 24));
+            todayDayIndex = ((diffDays % 365) + 365) % 365 + 1;
+            todayRealDate = now;
+            renderCarousel();
+        }
+
+        function renderCarousel() {
+            const carousel = document.getElementById('carousel');
+            let cardsHTML = '';
+
+            for (let offset = -renderRange; offset <= renderRange; offset++) {
+                let dayIndex = todayDayIndex + offset;
+                if (dayIndex < 1) dayIndex += 365;
+                if (dayIndex > 365) dayIndex -= 365;
+
+                const isToday = (offset === 0);
+                const fest = getFestivalForDay(dayIndex);
+                const hasFest = (fest.key !== 'normal');
+                
+                const calcDate = new Date(todayRealDate);
+                calcDate.setDate(todayRealDate.getDate() + offset);
+                const dateStr = `${calcDate.getMonth()+1}/${calcDate.getDate()}`;
+
+                // 錶面背景綁定 handleCardBgClick，空白處皆可觸發歸位
+                cardsHTML += `
+                    <div id="face-${dayIndex}" class="watch-face-card ${isToday ? 'is-today' : 'not-today'}" data-day="${dayIndex}" data-festkey="${fest.key}" onclick="handleCardBgClick(event, ${dayIndex})">
+                        
+                        <!-- 全新設計的雙線軌道 -->
+                        <div class="orbit-track-outer"></div>
+                        <div class="orbit-track-inner"></div>
+                        ${generateTicks()}
+                        
+                        <div class="boat-arm" id="boatWrapper-${dayIndex}">
+                            <div class="boat-icon-container pointer-events-auto cursor-pointer" onclick="handleBoatClick(event, ${dayIndex})">
+                                <span class="hieroglyph boat-icon transition-transform hover:scale-110">𓊟</span>
+                            </div>
+                        </div>
+
+                        <!-- 中央資訊區 (容器本身無點擊攔截) -->
+                        <div class="center-complication">
+                            <!-- 現代日期時分 (不攔截點擊) -->
+                            <div class="text-[var(--text-dim)] font-mono text-2xl leading-none opacity-70">${dateStr}</div>
+                            <div class="text-[var(--text-dim)] font-mono text-xs mt-1 mb-1 opacity-70" id="modernTimeDisplay-${dayIndex}">${isToday ? '00:00' : ''}</div>
+                            
+                            <!-- 晝夜圖示 (可點擊開啟典故) -->
+                            <div class="hieroglyph text-6xl my-1 drop-shadow-sm day-night-icon transition-colors cursor-pointer hover:scale-110 pointer-events-auto" 
+                                 style="color: var(--gold-accent);"
+                                 onclick="handleSunClick(event, ${dayIndex})">
+                                𓇳
+                            </div>
+                            
+                            <!-- 埃及時分 (不攔截點擊) -->
+                            ${isToday ? `
+                                <div class="flex items-center justify-center gap-2 opacity-80 w-full" id="timeDisplay">
+                                    <span class="hieroglyph text-4xl text-[var(--text-dim)]">𓃹</span>
+                                    <div id="egyHours" class="egyptian-numbers text-4xl">𓏺</div>
+                                    <span class="text-[var(--text-dim)] text-2xl mx-1 pb-2">:</span>
+                                    <div id="egyMins" class="egyptian-numbers text-4xl">𓏺</div>
+                                </div>
+                            ` : ``}
+
+                            <!-- 埃及日曆專屬節慶觸發點 -->
+                            <div class="mt-2 ${hasFest ? 'has-festival cursor-pointer pointer-events-auto' : 'pointer-events-none'}"
+                                 onclick="${hasFest ? `handleDateClick(event, ${dayIndex}, ${hasFest})` : ''}">
+                                 <div class="hieroglyph text-[1.4rem] text-[var(--text-main)] opacity-80 transition-opacity hover:opacity-100 text-center tracking-widest drop-shadow-sm">
+                                    ${getEgyptianDateHieroglyphs(dayIndex)}
+                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            carousel.innerHTML = cardsHTML;
+            setTimeout(scrollToTodayCard, 100);
+        }
+
+        function scrollToTodayCard() {
+            const carousel = document.getElementById('carousel');
+            const carouselWidth = carousel.clientWidth;
+            const scrollPosition = carouselWidth * renderRange;
+            carousel.scrollTo({
+                left: scrollPosition,
+                behavior: 'smooth' 
+            });
+        }
+
+        // --- 3. 互動邏輯 (導入防呆閥值以對齊電腦與手機行為) ---
+        const carouselEl = document.getElementById('carousel');
+        const festivalPanel = document.getElementById('festivalPanel');
+
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+        let dragDistance = 0;
+
+        carouselEl.addEventListener('mousedown', (e) => {
+            isDown = true;
+            dragDistance = 0;
+            carouselEl.style.scrollSnapType = 'none'; 
+            startX = e.pageX - carouselEl.offsetLeft;
+            scrollLeft = carouselEl.scrollLeft;
+        });
+        
+        carouselEl.addEventListener('mouseleave', () => {
+            isDown = false;
+            carouselEl.style.scrollSnapType = 'x mandatory';
+        });
+        
+        carouselEl.addEventListener('mouseup', () => {
+            isDown = false;
+            carouselEl.style.scrollSnapType = 'x mandatory';
+        });
+        
+        carouselEl.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault(); 
+            const x = e.pageX - carouselEl.offsetLeft;
+            const walk = (x - startX) * 1.5;
+            dragDistance = Math.abs(x - startX); 
+            carouselEl.scrollLeft = scrollLeft - walk;
+        });
+
+        // 錶面背景點擊處理 (非今日則回歸今日)
+        window.handleCardBgClick = function(event, dayIndex) {
+            if (dragDistance > 5) return; 
+            
+            // 若面板正在開啟，點擊背景視同關閉面板
+            if (festivalPanel.classList.contains('is-open')) {
+                closePanel();
+                return;
+            }
+
+            if (dayIndex !== todayDayIndex) {
+                scrollToTodayCard();
+            }
+        };
+
+        // 節日專屬點擊
+        window.handleDateClick = function(event, dayIndex, hasFest) {
+            event.stopPropagation();
+            if (dragDistance > 5) return;
+            if (hasFest) {
+                openGenericPanel(dayIndex, "festival");
+            }
+        };
+
+        window.handleSunClick = function(event, dayIndex) {
+            event.stopPropagation();
+            if (dragDistance > 5) return;
+            const isDayTime = !document.getElementById('appBody').classList.contains('is-night');
+            openGenericPanel(dayIndex, isDayTime ? "sun" : "night");
+        };
+
+        window.handleBoatClick = function(event, dayIndex) {
+            event.stopPropagation();
+            if (dragDistance > 5) return;
+            openGenericPanel(dayIndex, "boat");
+        };
+
+        window.openGenericPanel = function(dayIndex, type) {
+            let data;
+            if (type === "festival") {
+                const fest = getFestivalForDay(dayIndex);
+                data = { h_name: fest.h_name, trans: fest.trans, desc: fest.desc, color: fest.color };
+            } else if (type === "sun") {
+                data = infoData.sun;
+            } else if (type === "night") {
+                data = infoData.night;
+            } else if (type === "boat") {
+                data = infoData.boat;
+            }
+            
+            document.getElementById('panelHiero').innerText = data.h_name;
+            document.getElementById('panelHiero').style.color = data.color;
+            document.getElementById('panelTitle').innerText = data.trans;
+            document.getElementById('panelDesc').innerText = data.desc;
+            
+            festivalPanel.classList.add('is-open');
+        }
+
+        function closePanel() {
+            festivalPanel.classList.remove('is-open');
+        }
+
+        let lastCheckedDate = new Date().getDate();
+
+        function updateClockLoop() {
+            const now = new Date();
+            
+            if (now.getDate() !== lastCheckedDate) {
+                lastCheckedDate = now.getDate();
+                initCalendar();
+                return; 
+            }
+
+            const h = now.getHours();
+            const m = now.getMinutes();
+            const s = now.getSeconds();
+            const ms = now.getMilliseconds();
+            
+            const isDayTime = (h >= 6 && h < 18);
+
+            const appBody = document.getElementById('appBody');
+            const icons = document.querySelectorAll('.day-night-icon');
+            
+            if (isDayTime) {
+                appBody.classList.remove('is-night');
+                icons.forEach(i => {
+                    i.innerText = '𓇳'; 
+                    i.style.color = 'var(--gold-accent)';
+                });
+            } else {
+                appBody.classList.add('is-night');
+                icons.forEach(i => {
+                    i.innerText = '𓇽'; 
+                    i.style.color = 'var(--lapis-blue)';
+                });
+            }
+
+            const egyH = document.getElementById('egyHours');
+            const egyM = document.getElementById('egyMins');
+            
+            let currentEgyHour = 1;
+            if (isDayTime) {
+                currentEgyHour = h - 6 + 1;
+            } else {
+                currentEgyHour = h >= 18 ? h - 18 + 1 : h + 6 + 1;
+            }
+
+            if (egyH) egyH.innerHTML = toEgyptianNumeral(currentEgyHour);
+            if (egyM) egyM.innerHTML = toEgyptianNumeral(m === 0 ? 0 : m); 
+
+            const modernTimeEls = document.querySelectorAll('[id^="modernTimeDisplay-"]');
+            modernTimeEls.forEach(el => {
+                if(el.id === `modernTimeDisplay-${todayDayIndex}`) {
+                    el.innerText = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                }
+            });
+
+            const decimalHours = h + (m / 60) + (s / 3600) + (ms / 3600000);
+            const angle = (decimalHours - 12) * 15;
+            const boatArm = document.getElementById(`boatWrapper-${todayDayIndex}`);
+            if (boatArm) {
+                boatArm.style.transform = `rotate(${angle}deg)`;
+            }
+
+            requestAnimationFrame(updateClockLoop);
+        }
+
+        initCalendar();
+        requestAnimationFrame(updateClockLoop);
+
+    </script>
+</body>
+</html>
