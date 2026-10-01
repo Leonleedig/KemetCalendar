@@ -169,6 +169,26 @@
       transform: scale(0.92);
     }
 
+    /* Onboarding Tutorial Overlay & Spotlight */
+    .tutorial-overlay {
+      pointer-events: auto;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .tutorial-highlight {
+      position: relative;
+      z-index: 60 !important;
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.7), 0 0 25px rgba(245, 158, 11, 0.5) !important;
+      transition: box-shadow 0.3s ease;
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.85; }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 2s infinite ease-in-out;
+    }
+
     ::-webkit-scrollbar {
       width: 4px;
     }
@@ -182,6 +202,53 @@
 
   <!-- Three.js Canvas Container -->
   <div id="canvas-container" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+
+  <!-- Onboarding Step-by-Step Guide Modal -->
+  <div id="tutorial-modal" class="fixed top-8 left-1/2 -translate-x-1/2 z-50 w-[92vw] max-w-lg glass-panel rounded-2xl p-5 shadow-2xl transition-all duration-300">
+    <div class="flex items-center justify-between pb-3 border-b border-current/10">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+        <span id="tut-step-badge" class="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500">
+          步驟 1 / 6
+        </span>
+      </div>
+      <!-- Skip / 省略示範 Button -->
+      <button id="btn-skip-tutorial" class="text-xs opacity-60 hover:opacity-100 transition px-2.5 py-1 rounded-lg border border-current/10 hover:border-current/30">
+        省略示範 ✕
+      </button>
+    </div>
+
+    <!-- Step Description Content -->
+    <div class="py-4">
+      <h3 id="tut-title" class="font-bold text-base tracking-wide mb-1.5 flex items-center gap-2">
+        <span>🔄</span> 探索視角與天球位姿
+      </h3>
+      <p id="tut-desc" class="text-xs opacity-80 leading-relaxed min-h-[38px]">
+        在畫面上任意滑動、拖曳可旋轉觀測天球視角；滾輪或雙指可縮放距離。
+      </p>
+    </div>
+
+    <!-- Step Progress and Next Button -->
+    <div class="flex items-center justify-between pt-2 border-t border-current/10">
+      <div class="flex items-center gap-1.5" id="tut-dots">
+        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+        <span class="w-2 h-2 rounded-full bg-current/20"></span>
+        <span class="w-2 h-2 rounded-full bg-current/20"></span>
+        <span class="w-2 h-2 rounded-full bg-current/20"></span>
+        <span class="w-2 h-2 rounded-full bg-current/20"></span>
+        <span class="w-2 h-2 rounded-full bg-current/20"></span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="btn-prev-tutorial" class="hidden px-3 py-1.5 rounded-xl border border-current/20 text-xs font-semibold hover:bg-white/5 transition">
+          上一步
+        </button>
+        <button id="btn-next-tutorial" class="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs transition shadow-md shadow-amber-500/20">
+          下一步 ➔
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Screen-relative North Pointer (Strict 10% Viewport Height, Click to Reset View) -->
   <div id="north-indicator-hud" title="點擊重設視角：北方對齊上方、恢復預設比例">
@@ -981,6 +1048,170 @@
       dashLatVal.textContent = `${Math.abs(state.lat).toFixed(1)}° ${state.lat >= 0 ? 'N' : 'S'}`;
     }
 
+    const TutorialGuide = {
+      currentStep: 0,
+      isActive: true,
+      steps: [
+        {
+          badge: "步驟 1 / 6",
+          icon: "🔄",
+          title: "轉動與縮放視角",
+          desc: "於畫面任意處滑動或拖曳，即可 360° 旋轉天體環景；滾輪或兩指滑動可大幅縮放觀察距。",
+          action: () => {
+            closePanel();
+            infoDashboard.classList.add('hidden');
+            // Subtle camera pan to demonstrate orbital freedom
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 2.5;
+            setTimeout(() => { controls.autoRotate = false; }, 1800);
+          }
+        },
+        {
+          badge: "步驟 2 / 6",
+          icon: "👆👆",
+          title: "連按兩下呼出面板",
+          desc: "在主畫面空白處快速連點兩下（或手機雙擊），即可展開多維度時空操作面板。",
+          action: () => {
+            controls.autoRotate = false;
+            openPanel();
+            panel.classList.add('tutorial-highlight');
+          }
+        },
+        {
+          badge: "步驟 3 / 6",
+          icon: "🎚️",
+          title: "拖曳滑桿連續觀測",
+          desc: "拖曳緯度、時節與日夜滑桿可快轉天體運行。拖曳時面板自動透光至 5%，方便無遮擋對比變化。",
+          action: () => {
+            openPanel();
+            panel.classList.remove('tutorial-highlight');
+            // Briefly demo the translucent drag effect
+            panel.classList.add('panel-dragging');
+            setTimeout(() => {
+              panel.classList.remove('panel-dragging');
+            }, 1200);
+          }
+        },
+        {
+          badge: "步驟 4 / 6",
+          icon: "ⓘ",
+          title: "展開詳細天體數據",
+          desc: "點選 ⓘ 按鈕可開合天體即時座標面板，查看太陽與月球的高度角、方位角與當前月相。",
+          action: () => {
+            openPanel();
+            infoDashboard.classList.remove('hidden');
+            btnToggleInfo.classList.add('bg-amber-500/20', 'border-amber-500/60', 'text-amber-500', 'tutorial-highlight');
+          }
+        },
+        {
+          badge: "步驟 5 / 6",
+          icon: "👆",
+          title: "單擊外側隱藏面板",
+          desc: "在面板外隨意點擊一下，面板即平滑收合隱藏，隨時還原純粹天幕視野。",
+          action: () => {
+            btnToggleInfo.classList.remove('tutorial-highlight');
+            closePanel();
+          }
+        },
+        {
+          badge: "步驟 6 / 6",
+          icon: "🧭",
+          title: "指南針重設角度",
+          desc: "右上角箭頭始終指向正北。隨時點按指南針，天球即自動復位並將北方對齊螢幕上方！",
+          action: () => {
+            closePanel();
+            northHud.classList.add('tutorial-highlight', 'animate-pulse-subtle');
+            resetCameraToNorth();
+          }
+        }
+      ],
+
+      init() {
+        const modal = document.getElementById('tutorial-modal');
+        const badge = document.getElementById('tut-step-badge');
+        const title = document.getElementById('tut-title');
+        const desc = document.getElementById('tut-desc');
+        const dots = document.getElementById('tut-dots');
+        const btnNext = document.getElementById('btn-next-tutorial');
+        const btnPrev = document.getElementById('btn-prev-tutorial');
+        const btnSkip = document.getElementById('btn-skip-tutorial');
+
+        const updateUI = () => {
+          const stepData = this.steps[this.currentStep];
+          badge.textContent = stepData.badge;
+          title.innerHTML = `<span>${stepData.icon}</span> ${stepData.title}`;
+          desc.textContent = stepData.desc;
+
+          // Update dots
+          const dotElements = dots.querySelectorAll('span');
+          dotElements.forEach((dot, idx) => {
+            if (idx === this.currentStep) {
+              dot.className = "w-2 h-2 rounded-full bg-amber-500 scale-125 transition";
+            } else {
+              dot.className = "w-2 h-2 rounded-full bg-current/20 transition";
+            }
+          });
+
+          // Previous button visibility
+          if (this.currentStep > 0) {
+            btnPrev.classList.remove('hidden');
+          } else {
+            btnPrev.classList.add('hidden');
+          }
+
+          // Next button text
+          if (this.currentStep === this.steps.length - 1) {
+            btnNext.textContent = "開始探索 ✨";
+          } else {
+            btnNext.textContent = "下一步 ➔";
+          }
+
+          // Run contextual scene action
+          stepData.action();
+        };
+
+        const endTutorial = () => {
+          this.isActive = false;
+          modal.classList.add('opacity-0', 'pointer-events-none', '-translate-y-4');
+          setTimeout(() => {
+            modal.style.display = 'none';
+          }, 350);
+
+          // Clear any leftover tutorial highlights
+          panel.classList.remove('tutorial-highlight', 'panel-dragging');
+          btnToggleInfo.classList.remove('tutorial-highlight');
+          northHud.classList.remove('tutorial-highlight', 'animate-pulse-subtle');
+          controls.autoRotate = false;
+        };
+
+        btnNext.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.currentStep < this.steps.length - 1) {
+            this.currentStep++;
+            updateUI();
+          } else {
+            endTutorial();
+          }
+        });
+
+        btnPrev.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.currentStep > 0) {
+            this.currentStep--;
+            updateUI();
+          }
+        });
+
+        btnSkip.addEventListener('click', (e) => {
+          e.stopPropagation();
+          endTutorial();
+        });
+
+        // Trigger step 1 initially
+        updateUI();
+      }
+    };
+
     /**
      * Keep North Arrow Compass HUD synchronized with camera azimuth
      */
@@ -1215,6 +1446,9 @@
       state.baseDate = new Date();
       updateDiurnalTrajectories();
       updateCelestialState();
+
+      // Launch Onboarding Tutorial on load
+      TutorialGuide.init();
 
       function animate() {
         requestAnimationFrame(animate);
