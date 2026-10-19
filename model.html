@@ -2,986 +2,753 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>反向日晷 · 天體運行觀測儀</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>反向日晷天球儀 · 極簡黑白線稿版</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Three.js & OrbitControls -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <!-- Google Fonts for sleek astronomical aesthetic -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    * {
-      user-select: none;
-      -webkit-user-select: none;
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { user-select: none; -webkit-user-select: none; margin: 0; padding: 0; box-sizing: border-box; }
     body, html {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
+      width: 100%; height: 100%; overflow: hidden;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      transition: background-color 0.8s ease, color 0.8s ease;
+      background-color: #ffffff; color: #09090b;
     }
-    /* Day / Night Theme definitions */
-    body.theme-night {
-      background-color: #030712;
-      color: #f1f5f9;
-    }
-    body.theme-day {
-      background-color: #e2e8f0;
-      color: #0f172a;
-    }
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      display: block;
-      z-index: 1;
-    }
-    .astronomy-title {
-      font-family: 'Cinzel', serif;
-      letter-spacing: 0.15em;
-    }
-    /* Smooth glassmorphism adapts to day/night */
+    body.theme-night, body.theme-day { background-color: #ffffff; color: #09090b; }
+    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; z-index: 1; }
+    .astronomy-title { font-family: 'Cinzel', serif; letter-spacing: 0.15em; }
     .glass-panel {
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      transition: background 0.3s ease, border-color 0.3s ease, opacity 0.2s ease, transform 0.2s ease;
+      background: rgba(255, 255, 255, 0.94) !important;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border: 1.5px solid #09090b !important;
+      box-shadow: 6px 6px 0px rgba(9, 9, 11, 0.9) !important;
+      color: #09090b !important;
+      transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .theme-night .glass-panel {
-      background: rgba(10, 15, 29, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
-    }
-    .theme-day .glass-panel {
-      background: rgba(255, 255, 255, 0.88);
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      box-shadow: 0 20px 50px rgba(71, 85, 105, 0.25);
-    }
-
-    /* Range slider custom styling with persistent thumb during drag */
     .custom-slider {
-      -webkit-appearance: none;
-      appearance: none;
-      background: rgba(148, 163, 184, 0.25);
-      border-radius: 9999px;
-      outline: none;
-      height: 6px;
-      transition: opacity 0.2s ease;
+      -webkit-appearance: none; appearance: none;
+      background: #d4d4d8; border: 1px solid #09090b; border-radius: 9999px;
+      outline: none; height: 6px; transition: opacity 0.2s ease;
     }
     .custom-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: #f59e0b;
-      cursor: grab;
-      border: 2px solid #ffffff;
-      box-shadow: 0 0 10px rgba(245, 158, 11, 0.8), 0 2px 4px rgba(0,0,0,0.4);
-      opacity: 1 !important;
+      -webkit-appearance: none; appearance: none;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #ffffff; cursor: grab; border: 2.5px solid #09090b;
+      box-shadow: 2px 2px 0px #09090b; opacity: 1 !important;
       transition: transform 0.15s ease, background-color 0.2s ease;
     }
-    .custom-slider:active::-webkit-slider-thumb {
-      cursor: grabbing;
-      transform: scale(1.25);
-      background: #fbbf24;
-    }
+    .custom-slider:active::-webkit-slider-thumb { cursor: grabbing; transform: scale(1.2); background: #09090b; }
     .custom-slider::-moz-range-thumb {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: #f59e0b;
-      cursor: grab;
-      border: 2px solid #ffffff;
-      box-shadow: 0 0 10px rgba(245, 158, 11, 0.8), 0 2px 4px rgba(0,0,0,0.4);
-      opacity: 1 !important;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #ffffff; cursor: grab; border: 2.5px solid #09090b;
+      box-shadow: 2px 2px 0px #09090b; opacity: 1 !important;
     }
-
-    /* Dragging mode: panel drops to 5% opacity, children fade except slider thumb remains fully visible */
     .panel-dragging {
-      opacity: 0.05 !important;
-      backdrop-filter: blur(0px) !important;
+      opacity: 0.05 !important; backdrop-filter: blur(0px) !important;
       -webkit-backdrop-filter: blur(0px) !important;
-      border-color: transparent !important;
-      box-shadow: none !important;
+      border-color: transparent !important; box-shadow: none !important;
     }
-    .panel-dragging .slider-thumb-keep {
-      opacity: 1 !important;
-    }
-
-    /* Fixed 10% Screen Height North Compass Indicator */
+    .panel-dragging .slider-thumb-keep { opacity: 1 !important; }
     #north-indicator-hud {
-      position: absolute;
-      top: 24px;
-      right: 24px;
-      height: 10vh;
-      width: 10vh;
-      min-height: 48px;
-      min-width: 48px;
-      pointer-events: auto;
-      cursor: pointer;
-      z-index: 20;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
-      transition: opacity 0.5s ease, transform 0.2s ease;
+      position: absolute; top: 24px; right: 24px;
+      height: 10vh; width: 10vh; min-height: 48px; min-width: 48px;
+      pointer-events: auto; cursor: pointer; z-index: 20;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: #09090b; transition: opacity 0.5s ease, transform 0.2s ease;
     }
-    #north-indicator-hud:hover {
-      transform: scale(1.08);
-    }
-    #north-indicator-hud:active {
-      transform: scale(0.94);
-    }
-    #north-indicator-hud svg {
-      width: 100%;
-      height: 100%;
-      transform-origin: center center;
-    }
-    
-    /* Reset Button with inverted contrast border relative to background */
+    #north-indicator-hud:hover { transform: scale(1.08); }
+    #north-indicator-hud:active { transform: scale(0.94); }
+    #north-indicator-hud svg { width: 100%; height: 100%; transform-origin: center center; }
     .btn-reset-contrast {
-      border: 1.5px solid;
-      transition: transform 0.15s ease, border-color 0.3s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-    }
-    .theme-night .btn-reset-contrast {
-      border-color: #f8fafc;
-      box-shadow: 0 0 8px rgba(248, 250, 252, 0.2);
-    }
-    .theme-day .btn-reset-contrast {
-      border-color: #0f172a;
-      box-shadow: 0 0 8px rgba(15, 23, 42, 0.15);
+      border: 1.5px solid #09090b !important; background-color: #ffffff !important;
+      color: #09090b !important; box-shadow: 2px 2px 0px #09090b;
+      transition: transform 0.15s ease, background-color 0.2s ease, box-shadow 0.15s ease;
     }
     .btn-reset-contrast:hover {
-      transform: scale(1.1);
+      transform: translate(-1px, -1px); box-shadow: 3px 3px 0px #09090b; background-color: #f4f4f5 !important;
     }
-    .btn-reset-contrast:active {
-      transform: scale(0.92);
-    }
-
-    /* Onboarding Tutorial Overlay & Spotlight */
-    .tutorial-overlay {
-      pointer-events: auto;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
+    .btn-reset-contrast:active { transform: translate(1px, 1px); box-shadow: 0 0 0 #09090b; }
+    .tutorial-overlay { pointer-events: auto; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
     .tutorial-highlight {
-      position: relative;
-      z-index: 60 !important;
-      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.7), 0 0 25px rgba(245, 158, 11, 0.5) !important;
+      position: relative; z-index: 60 !important;
+      box-shadow: 0 0 0 3px #09090b, 6px 6px 0px #09090b !important;
       transition: box-shadow 0.3s ease;
     }
     @keyframes pulse-subtle {
       0%, 100% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.05); opacity: 0.85; }
     }
-    .animate-pulse-subtle {
-      animation: pulse-subtle 2s infinite ease-in-out;
-    }
-
-    ::-webkit-scrollbar {
-      width: 4px;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.3);
-      border-radius: 9999px;
-    }
+    .animate-pulse-subtle { animation: pulse-subtle 2s infinite ease-in-out; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #09090b; border-radius: 9999px; }
   </style>
 </head>
-<body class="relative w-full h-full theme-night">
+<body class="relative w-full h-full theme-day">
 
-  <!-- Three.js Canvas Container -->
   <div id="canvas-container" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
 
-  <!-- Onboarding Step-by-Step Guide Modal -->
-  <div id="tutorial-modal" class="fixed top-8 left-1/2 -translate-x-1/2 z-50 w-[92vw] max-w-lg glass-panel rounded-2xl p-5 shadow-2xl transition-all duration-300">
-    <div class="flex items-center justify-between pb-3 border-b border-current/10">
+  <!-- Tutorial Modal -->
+  <div id="tutorial-modal" class="fixed top-8 left-1/2 -translate-x-1/2 z-50 w-[92vw] max-w-lg glass-panel rounded-2xl p-5 transition-all duration-300">
+    <div class="flex items-center justify-between pb-3 border-b border-black/20">
       <div class="flex items-center gap-2">
-        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
-        <span id="tut-step-badge" class="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500">
-          步驟 1 / 6
-        </span>
+        <span class="w-2.5 h-2.5 rounded-full bg-black animate-ping"></span>
+        <span id="tut-step-badge" class="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-black bg-black text-white">步驟 1 / 6</span>
       </div>
-      <!-- Skip / 省略示範 Button -->
-      <button id="btn-skip-tutorial" class="text-xs opacity-60 hover:opacity-100 transition px-2.5 py-1 rounded-lg border border-current/10 hover:border-current/30">
-        省略示範 ✕
-      </button>
+      <button id="btn-skip-tutorial" class="text-xs font-semibold hover:bg-black hover:text-white transition px-2.5 py-1 rounded-lg border border-black">省略示範 ✕</button>
     </div>
-
-    <!-- Step Description Content -->
     <div class="py-4">
-      <h3 id="tut-title" class="font-bold text-base tracking-wide mb-1.5 flex items-center gap-2">
-        <span>🔄</span> 探索視角與天球位姿
-      </h3>
-      <p id="tut-desc" class="text-xs opacity-80 leading-relaxed min-h-[38px]">
-        在畫面上任意滑動、拖曳可旋轉觀測天球視角；滾輪或雙指可縮放距離。
-      </p>
+      <h3 id="tut-title" class="font-bold text-base tracking-wide mb-1.5 flex items-center gap-2 text-black"><span>🔄</span> 探索視角與天球位姿</h3>
+      <p id="tut-desc" class="text-xs text-zinc-700 leading-relaxed min-h-[38px]">在畫面上任意滑動、拖曳可旋轉觀測天球視角；滾輪或雙指可縮放距離。</p>
     </div>
-
-    <!-- Step Progress and Next Button -->
-    <div class="flex items-center justify-between pt-2 border-t border-current/10">
+    <div class="flex items-center justify-between pt-2 border-t border-black/20">
       <div class="flex items-center gap-1.5" id="tut-dots">
-        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-        <span class="w-2 h-2 rounded-full bg-current/20"></span>
-        <span class="w-2 h-2 rounded-full bg-current/20"></span>
-        <span class="w-2 h-2 rounded-full bg-current/20"></span>
-        <span class="w-2 h-2 rounded-full bg-current/20"></span>
-        <span class="w-2 h-2 rounded-full bg-current/20"></span>
+        <span class="w-2 h-2 rounded-full bg-black"></span>
+        <span class="w-2 h-2 rounded-full bg-black/20"></span>
+        <span class="w-2 h-2 rounded-full bg-black/20"></span>
+        <span class="w-2 h-2 rounded-full bg-black/20"></span>
+        <span class="w-2 h-2 rounded-full bg-black/20"></span>
+        <span class="w-2 h-2 rounded-full bg-black/20"></span>
       </div>
-
       <div class="flex items-center gap-2">
-        <button id="btn-prev-tutorial" class="hidden px-3 py-1.5 rounded-xl border border-current/20 text-xs font-semibold hover:bg-white/5 transition">
-          上一步
-        </button>
-        <button id="btn-next-tutorial" class="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs transition shadow-md shadow-amber-500/20">
-          下一步 ➔
-        </button>
+        <button id="btn-prev-tutorial" class="hidden px-3 py-1.5 rounded-xl border border-black text-xs font-semibold hover:bg-zinc-100 transition">上一步</button>
+        <button id="btn-next-tutorial" class="px-4 py-1.5 rounded-xl bg-black hover:bg-zinc-800 text-white font-semibold text-xs transition border border-black">下一步 ➔</button>
       </div>
     </div>
   </div>
 
-  <!-- Screen-relative North Pointer (Strict 10% Viewport Height, Click to Reset View) -->
+  <!-- North Indicator -->
   <div id="north-indicator-hud" title="點擊重設視角：北方對齊上方、恢復預設比例">
     <svg id="north-arrow-svg" viewBox="0 0 100 100">
-      <!-- Compass North Ring & Arrow -->
-      <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="3, 3" class="opacity-40" />
-      <!-- North Pointer Arrowhead -->
-      <polygon points="50,10 63,56 50,47 37,56" fill="#ef4444" />
-      <polygon points="50,90 61,54 50,60 39,54" fill="currentColor" class="opacity-40" />
-      <!-- Letter N -->
-      <text x="50" y="28" font-family="'Cinzel', serif" font-weight="700" font-size="14" fill="#ffffff" text-anchor="middle">N</text>
+      <circle cx="50" cy="50" r="42" fill="#ffffff" fill-opacity="0.85" stroke="#09090b" stroke-width="2" stroke-dasharray="4, 3" />
+      <polygon points="50,10 63,56 50,47 37,56" fill="#09090b" stroke="#09090b" stroke-width="1.5" stroke-linejoin="round" />
+      <polygon points="50,90 61,54 50,60 39,54" fill="#ffffff" stroke="#09090b" stroke-width="1.5" stroke-linejoin="round" />
+      <text x="50" y="39" font-family="'Cinzel', serif" font-weight="700" font-size="13" fill="#ffffff" text-anchor="middle">N</text>
     </svg>
   </div>
 
-  <!-- Pure Minimalist Floating Slider & Layer Controller (No headers, no titles, no text fields) -->
-  <div id="control-panel" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 glass-panel rounded-2xl w-[92vw] max-w-md p-4 opacity-0 pointer-events-none scale-95 shadow-2xl transition-all duration-300">
+  <!-- Control Panel -->
+  <div id="control-panel" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 glass-panel rounded-2xl w-[92vw] max-w-md p-4 opacity-0 pointer-events-none scale-95 transition-all duration-300">
     <div class="space-y-4">
-      
-      <!-- 1. Latitude Slider (-90° to +90° = 180° range from South Pole to North Pole) -->
       <div class="flex items-center gap-3">
-        <span class="text-xs font-mono font-semibold w-16 opacity-80 shrink-0" id="label-lat">25.0° N</span>
+        <span class="text-xs font-mono font-bold w-16 shrink-0" id="label-lat">25.0° N</span>
         <div class="flex-1 flex items-center">
           <input type="range" id="slider-lat" min="-90" max="90" step="0.25" value="25.033" class="custom-slider slider-thumb-keep w-full">
         </div>
-        <button id="btn-reset-lat" class="btn-reset-contrast w-8 h-8 rounded-xl bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 flex items-center justify-center text-sm font-semibold shrink-0" title="復位至當下緯度 (台北)">
-          ⟲
-        </button>
+        <button id="btn-reset-lat" class="btn-reset-contrast w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold shrink-0" title="復位至當下緯度 (台北)">⟲</button>
       </div>
-
-      <!-- 2. Season Slider (-182 days to +182 days with integer day steps for consistent time of day) -->
       <div class="flex items-center gap-3">
-        <span class="text-xs font-mono font-semibold w-16 opacity-80 shrink-0" id="label-season">今日</span>
+        <span class="text-xs font-mono font-bold w-16 shrink-0" id="label-season">今日</span>
         <div class="flex-1 flex items-center">
           <input type="range" id="slider-season" min="-182" max="182" step="1" value="0" class="custom-slider slider-thumb-keep w-full">
         </div>
-        <button id="btn-reset-season" class="btn-reset-contrast w-8 h-8 rounded-xl bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 flex items-center justify-center text-sm font-semibold shrink-0" title="復位至當下時節 (今天)">
-          ⟲
-        </button>
+        <button id="btn-reset-season" class="btn-reset-contrast w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold shrink-0" title="復位至當下時節 (今天)">⟲</button>
       </div>
-
-      <!-- 3. Diurnal / Time of Day Slider (-12h to +12h range relative to current moment) -->
       <div class="flex items-center gap-3">
-        <span class="text-xs font-mono font-semibold w-16 opacity-80 shrink-0" id="label-time">12:00</span>
+        <span class="text-xs font-mono font-bold w-16 shrink-0" id="label-time">12:00</span>
         <div class="flex-1 flex items-center">
           <input type="range" id="slider-time" min="-12" max="12" step="0.1" value="0" class="custom-slider slider-thumb-keep w-full">
         </div>
-        <button id="btn-reset-time" class="btn-reset-contrast w-8 h-8 rounded-xl bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 flex items-center justify-center text-sm font-semibold shrink-0" title="復位至當下現在時間">
-          ⟲
-        </button>
+        <button id="btn-reset-time" class="btn-reset-contrast w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold shrink-0" title="復位至當下現在時間">⟲</button>
       </div>
-
-      <!-- Button Group: Sun, Moon, Info Toggle -->
-      <div class="flex items-center justify-center gap-4 pt-1 border-t border-current/10">
-        <!-- Sun Toggle -->
-        <button id="btn-toggle-sun" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition bg-amber-500/20 border-amber-500/60 text-amber-500 shadow-sm" title="切換太陽天體、軌跡與範圍">
-          <span>☀️</span>
-          <span>日</span>
-        </button>
-
-        <!-- Moon Toggle -->
-        <button id="btn-toggle-moon" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition bg-blue-500/20 border-blue-500/60 text-blue-400 shadow-sm" title="切換月亮天體、軌跡與範圍">
-          <span>🌙</span>
-          <span>月</span>
-        </button>
-
-        <!-- Info Dashboard Toggle -->
-        <button id="btn-toggle-info" class="w-8 h-8 rounded-xl border border-current/20 hover:border-current/50 transition flex items-center justify-center text-sm font-serif font-bold opacity-80 hover:opacity-100" title="展開／折疊座標日期儀表板">
-          ⓘ
-        </button>
+      <div class="flex items-center justify-center gap-4 pt-2 border-t border-black/20">
+        <button id="btn-toggle-sun" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border-2 border-black text-xs font-bold transition bg-black text-white" title="切換太陽天體、軌跡與範圍"><span>☉</span><span>日</span></button>
+        <button id="btn-toggle-moon" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border-2 border-black text-xs font-bold transition bg-black text-white" title="切換月亮天體、軌跡與範圍"><span>☽</span><span>月</span></button>
+        <button id="btn-toggle-info" class="w-8 h-8 rounded-xl border-2 border-black hover:bg-zinc-100 transition flex items-center justify-center text-sm font-serif font-bold" title="展開／折疊座標日期儀表板">ⓘ</button>
       </div>
-
-      <!-- Collapsible Info Dashboard -->
-      <div id="info-dashboard" class="hidden pt-2 border-t border-current/10 space-y-2 text-xs font-mono">
-        <div class="text-[11px] opacity-70 flex justify-between">
+      <div id="info-dashboard" class="hidden pt-2 border-t border-black/20 space-y-2 text-xs font-mono">
+        <div class="text-[11px] flex justify-between font-semibold">
           <span id="dash-datetime">2026-10-01 11:31</span>
-          <span id="dash-season-term" class="text-amber-500 font-semibold">秋分帶</span>
+          <span id="dash-season-term" class="underline font-bold">秋分帶</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-[11px]">
-          <div class="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
-            <div class="font-bold text-amber-500">☀️ 太陽</div>
+          <div class="p-2 rounded-lg bg-white border border-black">
+            <div class="font-bold">☉ 太陽</div>
             <div>高度: <span id="dash-sun-alt" class="font-bold">+00.0°</span></div>
             <div>方位: <span id="dash-sun-az" class="font-bold">000.0°</span></div>
           </div>
-          <div class="p-2 rounded-lg bg-blue-500/10 border border-blue-500/30">
-            <div class="font-bold text-blue-400">🌙 月球</div>
+          <div class="p-2 rounded-lg bg-white border border-black">
+            <div class="font-bold">☽ 月球</div>
             <div>高度: <span id="dash-moon-alt" class="font-bold">+00.0°</span></div>
             <div>方位: <span id="dash-moon-az" class="font-bold">000.0°</span></div>
           </div>
         </div>
-        <div class="text-[10px] opacity-60 text-center">
-          月相: <span id="dash-moon-phase" class="font-semibold text-slate-300">望月</span> · 觀測緯度: <span id="dash-lat-val">25.0° N</span>
+        <div class="text-[10px] text-zinc-700 text-center font-semibold">
+          月相: <span id="dash-moon-phase" class="font-bold text-black">望月</span> · 觀測緯度: <span id="dash-lat-val">25.0° N</span>
         </div>
       </div>
-
     </div>
   </div>
 
   <script>
-    /**
-     * Astronomical Algorithm Engine (Meeus Ephemeris Formulations)
-     */
+    // ========== Astro Engine ==========
     const Astro = {
       rad: Math.PI / 180,
       deg: 180 / Math.PI,
+      toJulian(date) { return date.getTime() / 86400000 + 2440587.5; },
+      toDaysSince2000(date) { return this.toJulian(date) - 2451545.0; },
 
-      toJulian(date) {
-        return (date.getTime() / 86400000) + 2440587.5;
-      },
-
-      // Calculate Solar coordinates (Altitude & Azimuth)
       getSunPosition(date, lat, lng) {
-        const jd = this.toJulian(date);
-        const d = jd - 2451545.0;
-        
-        const g = (357.529 + 0.98560028 * d) % 360;
-        const gRad = g * this.rad;
-        const q = (280.459 + 0.98564736 * d) % 360;
-        const L = (q + 1.915 * Math.sin(gRad) + 0.020 * Math.sin(2 * gRad)) % 360;
-        const LRad = L * this.rad;
-        const e = (23.439 - 0.00000036 * d) * this.rad;
-        
-        const sinDec = Math.sin(e) * Math.sin(LRad);
+        const d = this.toDaysSince2000(date);
+        const L = (280.460 + 0.9856474 * d) % 360;
+        const g = ((357.528 + 0.9856003 * d) % 360) * this.rad;
+        const lambda = (L + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * this.rad;
+        const eps = (23.439 - 0.0000004 * d) * this.rad;
+        const sinDec = Math.sin(eps) * Math.sin(lambda);
         const dec = Math.asin(sinDec);
-        const ra = Math.atan2(Math.cos(e) * Math.sin(LRad), Math.cos(LRad));
-        
-        const gmst = (280.46061837 + 360.98564736629 * d) % 360;
-        const lmst = (gmst + lng) * this.rad;
-        const H = lmst - ra;
-        
+        const cosDec = Math.cos(dec);
+        const ra = Math.atan2(Math.cos(eps) * Math.sin(lambda), Math.cos(lambda));
+        const GMST0 = (18.697374558 + 24.06570982441908 * d) % 24;
+        const ut = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+        const gmst = (GMST0 + ut * 1.00273790935) % 24;
+        const lmst = (gmst + lng / 15 + 24) % 24;
+        const hourAngle = lmst * 15 * this.rad - ra;
         const phi = lat * this.rad;
-        const sinAlt = Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H);
-        const alt = Math.asin(sinAlt);
-        
+        const sinAlt = Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * cosDec * Math.cos(hourAngle);
+        const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
         const cosAz = (Math.sin(dec) - Math.sin(phi) * Math.sin(alt)) / (Math.cos(phi) * Math.cos(alt) + 1e-7);
         let az = Math.acos(Math.max(-1, Math.min(1, cosAz)));
-        if (Math.sin(H) > 0) az = 2 * Math.PI - az;
-        const azDeg = ((az * this.deg) + 180) % 360;
-        
+        if (Math.sin(hourAngle) > 0) az = 2 * Math.PI - az;
         return {
           altitude: alt * this.deg,
-          azimuth: azDeg,
+          azimuth: ((az * this.deg) + 180) % 360,
           declination: dec * this.deg
         };
       },
 
-      // Calculate Moon coordinates (Altitude, Azimuth, and Phase)
       getMoonPosition(date, lat, lng) {
-        const jd = this.toJulian(date);
-        const d = jd - 2451545.0;
-        
-        const L = (218.316 + 13.176396 * d) % 360;
-        const M = (134.963 + 13.064993 * d) % 360;
-        const F = (93.272 + 13.229350 * d) % 360;
-        
-        const lambda = (L + 6.289 * Math.sin(M * this.rad)) * this.rad;
-        const beta = (5.128 * Math.sin(F * this.rad)) * this.rad;
+        const d = this.toDaysSince2000(date);
+        const L0 = 218.316 + 13.176396 * d;
+        const M = (134.963 + 13.064993 * d) * this.rad;
+        const F = (93.272 + 13.229350 * d) * this.rad;
+        const l = (L0 + 6.289 * Math.sin(M)) * this.rad;
+        const b = (5.128 * Math.sin(F)) * this.rad;
         const eps = 23.439 * this.rad;
-        
-        const sinDec = Math.sin(beta) * Math.cos(eps) + Math.cos(beta) * Math.sin(eps) * Math.sin(lambda);
-        const dec = Math.asin(sinDec);
-        const y = Math.sin(lambda) * Math.cos(eps) - Math.tan(beta) * Math.sin(eps);
-        const x = Math.cos(lambda);
+        const sinDec = Math.sin(eps) * Math.sin(l) * Math.cos(b) + Math.cos(eps) * Math.sin(b);
+        const dec = Math.asin(Math.max(-1, Math.min(1, sinDec)));
+        const cosDec = Math.cos(dec);
+        const y = Math.cos(eps) * Math.sin(l) * Math.cos(b) - Math.sin(eps) * Math.sin(b);
+        const x = Math.cos(l) * Math.cos(b);
         const ra = Math.atan2(y, x);
-        
-        const gmst = (280.46061837 + 360.98564736629 * d) % 360;
-        const lmst = (gmst + lng) * this.rad;
-        const H = lmst - ra;
-        
+        const GMST0 = (18.697374558 + 24.06570982441908 * d) % 24;
+        const ut = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+        const lmst = (GMST0 + ut * 1.00273790935 + lng / 15 + 24) % 24;
+        const hourAngle = lmst * 15 * this.rad - ra;
         const phi = lat * this.rad;
-        const sinAlt = Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H);
-        const alt = Math.asin(sinAlt);
-        
+        const sinAlt = Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * cosDec * Math.cos(hourAngle);
+        const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
         const cosAz = (Math.sin(dec) - Math.sin(phi) * Math.sin(alt)) / (Math.cos(phi) * Math.cos(alt) + 1e-7);
         let az = Math.acos(Math.max(-1, Math.min(1, cosAz)));
-        if (Math.sin(H) > 0) az = 2 * Math.PI - az;
-        const azDeg = ((az * this.deg) + 180) % 360;
-
-        const daysSinceNew = (jd - 2451549.5) % 29.53058867;
-        const phaseRatio = (daysSinceNew < 0 ? daysSinceNew + 29.53058867 : daysSinceNew) / 29.53058867;
-        
-        let phaseName = "新月";
-        if (phaseRatio > 0.05 && phaseRatio < 0.2) phaseName = "眉月";
-        else if (phaseRatio >= 0.2 && phaseRatio < 0.3) phaseName = "上弦月";
-        else if (phaseRatio >= 0.3 && phaseRatio < 0.45) phaseName = "盈凸月";
-        else if (phaseRatio >= 0.45 && phaseRatio < 0.55) phaseName = "望月";
-        else if (phaseRatio >= 0.55 && phaseRatio < 0.7) phaseName = "虧凸月";
-        else if (phaseRatio >= 0.7 && phaseRatio < 0.8) phaseName = "下弦月";
-        else if (phaseRatio >= 0.8 && phaseRatio < 0.95) phaseName = "殘月";
-
+        if (Math.sin(hourAngle) > 0) az = 2 * Math.PI - az;
+        const moonAge = ((date.getTime() / 86400000 - 2451550.1) % 29.530588853 + 29.530588853) % 29.530588853;
+        const phaseFraction = (1 - Math.cos((moonAge / 29.530588853) * 2 * Math.PI)) / 2;
         return {
           altitude: alt * this.deg,
-          azimuth: azDeg,
+          azimuth: ((az * this.deg) + 180) % 360,
           declination: dec * this.deg,
-          phaseName: phaseName,
-          phaseValue: phaseRatio
+          phaseFraction,
+          moonAge
         };
       },
 
-      toCartesian(altitude, azimuth, radius) {
-        const altRad = altitude * this.rad;
-        const azRad = azimuth * this.rad;
-        const x = radius * Math.cos(altRad) * Math.sin(azRad);
-        const y = radius * Math.sin(altRad);
-        const z = -radius * Math.cos(altRad) * Math.cos(azRad);
-        return new THREE.Vector3(x, y, z);
+      toCartesian(altDeg, azDeg, radius) {
+        const alt = altDeg * this.rad;
+        const az = azDeg * this.rad;
+        return new THREE.Vector3(
+          radius * Math.cos(alt) * Math.sin(az),
+          radius * Math.sin(alt),
+          -radius * Math.cos(alt) * Math.cos(az)
+        );
       }
     };
 
-    // Constant Defaults for Reset buttons
-    const DEFAULT_LAT = 25.0330;
-    const DEFAULT_LNG = 121.5654;
-
-    // Application state
+    // ========== State ==========
     const state = {
-      baseDate: new Date(),        // The real-time baseline anchor
-      seasonOffsetDays: 0,        // Slider offset in integer days (-182 to +182)
-      diurnalOffsetHours: 0,      // Slider offset in hours (-12 to +12)
-      lat: DEFAULT_LAT,
-      lng: DEFAULT_LNG,
-      sunRadius: 56.0,
-      moonRadius: 49.0,
-      horizonRadius: 52.0,
-      isDayMode: false,
-      visibleLayers: {
-        sun: true,                // Sun body, track, season band, shadow
-        moon: true,               // Moon body, track, moon band
-      }
+      lat: 25.0330,
+      lng: 121.5654,
+      seasonDayOffset: 0,
+      timeHourOffset: 0,
+      baseDate: new Date(),
+      visibleLayers: { sun: true, moon: true },
+      sunRadius: 56,
+      moonRadius: 49,
+      horizonRadius: 40,
+      isControlPanelOpen: false,
+      panelOpenTime: 0,
+      cameraMoved: true
     };
 
-    // Calculate dynamic working date: Season slider strictly locks the same time of day
     function getActiveDate() {
       const d = new Date(state.baseDate.getTime());
-      const origHours = d.getHours();
-      const origMinutes = d.getMinutes();
-      const origSeconds = d.getSeconds();
-      const origMs = d.getMilliseconds();
-
-      // Shift date by exact calendar days
-      const daysOffset = Math.round(state.seasonOffsetDays);
-      d.setDate(d.getDate() + daysOffset);
-
-      // Lock identical wall-clock hour/minute/second so user can compare same time across seasons
-      d.setHours(origHours, origMinutes, origSeconds, origMs);
-
-      // Apply diurnal offset in exact milliseconds
-      const finalMs = d.getTime() + (state.diurnalOffsetHours * 3600000);
-      return new Date(finalMs);
+      if (state.seasonDayOffset) d.setDate(d.getDate() + state.seasonDayOffset);
+      if (state.timeHourOffset) d.setMinutes(d.getMinutes() + Math.round(state.timeHourOffset * 60));
+      return d;
     }
 
-    // DOM Elements
-    const body = document.body;
-    const panel = document.getElementById('control-panel');
-    const northArrowSvg = document.getElementById('north-arrow-svg');
-
-    // Sliders & Reset Buttons
-    const sliderLat = document.getElementById('slider-lat');
-    const labelLat = document.getElementById('label-lat');
-    const btnResetLat = document.getElementById('btn-reset-lat');
-
-    const sliderSeason = document.getElementById('slider-season');
-    const labelSeason = document.getElementById('label-season');
-    const btnResetSeason = document.getElementById('btn-reset-season');
-
-    const sliderTime = document.getElementById('slider-time');
-    const labelTime = document.getElementById('label-time');
-    const btnResetTime = document.getElementById('btn-reset-time');
-
-    // Action buttons
-    const btnToggleSun = document.getElementById('btn-toggle-sun');
-    const btnToggleMoon = document.getElementById('btn-toggle-moon');
-    const btnToggleInfo = document.getElementById('btn-toggle-info');
-    const infoDashboard = document.getElementById('info-dashboard');
-
-    // Dashboard Telemetry
-    const dashDatetime = document.getElementById('dash-datetime');
-    const dashSeasonTerm = document.getElementById('dash-season-term');
-    const dashSunAlt = document.getElementById('dash-sun-alt');
-    const dashSunAz = document.getElementById('dash-sun-az');
-    const dashMoonAlt = document.getElementById('dash-moon-alt');
-    const dashMoonAz = document.getElementById('dash-moon-az');
-    const dashMoonPhase = document.getElementById('dash-moon-phase');
-    const dashLatVal = document.getElementById('dash-lat-val');
-
-    // Three.js Scene Setup
+    // ========== Three.js Setup ==========
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-
-    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 2500);
-    camera.position.set(0, 38, 92);
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 2500);
+    camera.position.set(0, 42, 98);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setClearColor(0xffffff, 1);
     container.appendChild(renderer.domElement);
 
+    // ========== Edge Post-Processor (optimized traverse) ==========
+    const EdgePostProcessor = {
+      colorTarget: null,
+      idTarget: null,
+      idMaterialCache: new Map(),
+      outlineMeshes: [],
+      quadScene: new THREE.Scene(),
+      quadCamera: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1),
+      quadMaterial: null,
+
+      getIdMaterial(id) {
+        if (!this.idMaterialCache.has(id)) {
+          const r = ((id * 67) % 251 + 1) / 255;
+          const g = ((id * 131) % 251 + 1) / 255;
+          const b = ((id * 199) % 251 + 1) / 255;
+          this.idMaterialCache.set(id, new THREE.MeshBasicMaterial({
+            color: new THREE.Color(r, g, b), side: THREE.DoubleSide
+          }));
+        }
+        return this.idMaterialCache.get(id);
+      },
+
+      init(w, h, pr) {
+        const width = Math.floor(w * pr);
+        const height = Math.floor(h * pr);
+        const depthTexture = new THREE.DepthTexture();
+        depthTexture.type = THREE.UnsignedShortType;
+        depthTexture.minFilter = THREE.NearestFilter;
+        depthTexture.magFilter = THREE.NearestFilter;
+
+        this.colorTarget = new THREE.WebGLRenderTarget(width, height, {
+          minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
+          format: THREE.RGBAFormat, depthTexture, depthBuffer: true
+        });
+        this.idTarget = new THREE.WebGLRenderTarget(width, height, {
+          minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter,
+          format: THREE.RGBAFormat, depthBuffer: true
+        });
+
+        this.quadMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+            tDiffuse: { value: this.colorTarget.texture },
+            tDepth: { value: this.colorTarget.depthTexture },
+            tObjectId: { value: this.idTarget.texture },
+            uResolution: { value: new THREE.Vector2(width, height) },
+            uCameraNear: { value: camera.near },
+            uCameraFar: { value: camera.far }
+          },
+          vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,1.0); }`,
+          fragmentShader: `
+            #include <packing>
+            uniform sampler2D tDiffuse, tDepth, tObjectId;
+            uniform vec2 uResolution;
+            uniform float uCameraNear, uCameraFar;
+            varying vec2 vUv;
+            float getLinearDepth(vec2 c) {
+              float z = texture2D(tDepth, c).x;
+              if (z >= 0.9999) return 1.0;
+              float viewZ = perspectiveDepthToViewZ(z, uCameraNear, uCameraFar);
+              return viewZToOrthographicDepth(viewZ, uCameraNear, uCameraFar);
+            }
+            void main() {
+              vec2 t = vec2(1.0/uResolution.x, 1.0/uResolution.y);
+              float d00=getLinearDepth(vUv+t*vec2(-1,-1)), d01=getLinearDepth(vUv+t*vec2(-1,0)),
+                    d02=getLinearDepth(vUv+t*vec2(-1,1)), d10=getLinearDepth(vUv+t*vec2(0,-1)),
+                    d12=getLinearDepth(vUv+t*vec2(0,1)), d20=getLinearDepth(vUv+t*vec2(1,-1)),
+                    d21=getLinearDepth(vUv+t*vec2(1,0)), d22=getLinearDepth(vUv+t*vec2(1,1));
+              float gxD=-d00-2.*d01-d02+d20+2.*d21+d22;
+              float gyD=-d00-2.*d10-d20+d02+2.*d12+d22;
+              float depthEdge = sqrt(gxD*gxD + gyD*gyD);
+              vec3 cC=texture2D(tObjectId,vUv).rgb, cL=texture2D(tObjectId,vUv+t*vec2(-1,0)).rgb,
+                   cR=texture2D(tObjectId,vUv+t*vec2(1,0)).rgb, cT=texture2D(tObjectId,vUv+t*vec2(0,1)).rgb,
+                   cB=texture2D(tObjectId,vUv+t*vec2(0,-1)).rgb;
+              float idEdge = step(0.02, max(max(distance(cC,cL),distance(cC,cR)), max(distance(cC,cT),distance(cC,cB))));
+              float edge = max(smoothstep(0.0025, 0.007, depthEdge), idEdge);
+              vec4 base = texture2D(tDiffuse, vUv);
+              float luma = dot(base.rgb, vec3(0.299, 0.587, 0.114));
+              gl_FragColor = vec4(vec3(luma * (1.0 - edge)), 1.0);
+            }`
+        });
+        this.quadScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.quadMaterial));
+        this.refreshOutlineList();
+      },
+
+      refreshOutlineList() {
+        this.outlineMeshes.length = 0;
+        scene.traverse(obj => {
+          if (obj.isMesh && !(obj.userData && obj.userData.noOutlinePass)) {
+            this.outlineMeshes.push(obj);
+          }
+        });
+      },
+
+      resize(w, h, pr) {
+        if (!this.colorTarget) return;
+        const width = Math.floor(w * pr);
+        const height = Math.floor(h * pr);
+        this.colorTarget.setSize(width, height);
+        this.idTarget.setSize(width, height);
+        this.quadMaterial.uniforms.uResolution.value.set(width, height);
+      },
+
+      render() {
+        renderer.setRenderTarget(this.colorTarget);
+        renderer.setClearColor(0xffffff, 1);
+        renderer.clear();
+        renderer.render(scene, camera);
+
+        const saved = [];
+        for (let i = 0; i < this.outlineMeshes.length; i++) {
+          const m = this.outlineMeshes[i];
+          if (!m.visible) continue;
+          saved.push([m, m.material]);
+          m.material = this.getIdMaterial((m.userData && m.userData.componentId) || 1);
+        }
+        // temporarily hide lines
+        const hiddenLines = [];
+        scene.traverse(obj => {
+          if ((obj.isLine || obj.isLineSegments) && obj.visible) {
+            hiddenLines.push(obj);
+            obj.visible = false;
+          }
+        });
+
+        renderer.setRenderTarget(this.idTarget);
+        renderer.setClearColor(0x000000, 1);
+        renderer.clear();
+        renderer.render(scene, camera);
+
+        for (let i = 0; i < saved.length; i++) saved[i][0].material = saved[i][1];
+        for (let i = 0; i < hiddenLines.length; i++) hiddenLines[i].visible = true;
+
+        renderer.setRenderTarget(null);
+        renderer.render(this.quadScene, this.quadCamera);
+      }
+    };
+
+    // ========== Controls ==========
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 12;
-    controls.maxDistance = 650; // Greatly expanded zoom out range
+    controls.maxDistance = 650;
     controls.target.set(0, 0, 0);
+    controls.addEventListener('change', () => { state.cameraMoved = true; });
 
     const celestialGroup = new THREE.Group();
     scene.add(celestialGroup);
 
-    // 1. Celestial Shells removed per minimalism design
-
-    // 2. Horizon Plane & Dial Compass Plate
+    // Horizon disc
     const dialRadius = state.horizonRadius;
-    const dialDiscGeo = new THREE.CircleGeometry(dialRadius, 64);
-    const dialDiscMat = new THREE.MeshStandardMaterial({
-      color: 0x070c18,
-      roughness: 0.8,
-      metalness: 0.2,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.75
-    });
-    const dialDisc = new THREE.Mesh(dialDiscGeo, dialDiscMat);
+    const dialDisc = new THREE.Mesh(
+      new THREE.CircleGeometry(dialRadius, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.88,
+        polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1
+      })
+    );
     dialDisc.rotation.x = -Math.PI / 2;
-    dialDisc.receiveShadow = true;
+    dialDisc.userData.componentId = 1;
     celestialGroup.add(dialDisc);
 
-    // Horizon Perimeter Ring
-    const ringGeo = new THREE.RingGeometry(dialRadius - 0.25, dialRadius + 0.25, 96);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.65
-    });
-    const horizonRing = new THREE.Mesh(ringGeo, ringMat);
+    // Compass grid
+    const compassGridGroup = new THREE.Group();
+    for (let deg = 0; deg < 180; deg += 30) {
+      const rad = deg * Astro.rad;
+      const r = dialRadius * 0.98;
+      const pts = [
+        new THREE.Vector3(-r * Math.sin(rad), 0.02, -r * Math.cos(rad)),
+        new THREE.Vector3( r * Math.sin(rad), 0.02,  r * Math.cos(rad))
+      ];
+      compassGridGroup.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color: 0xd4d4d8, transparent: true, opacity: 0.7 })
+      ));
+    }
+    celestialGroup.add(compassGridGroup);
+
+    // Horizon ring
+    const horizonRing = new THREE.Mesh(
+      new THREE.RingGeometry(dialRadius - 0.35, dialRadius + 0.35, 96),
+      new THREE.MeshBasicMaterial({ color: 0x09090b, side: THREE.DoubleSide })
+    );
     horizonRing.rotation.x = -Math.PI / 2;
-    horizonRing.position.y = 0.02;
+    horizonRing.position.y = 0.03;
+    horizonRing.userData.componentId = 2;
     celestialGroup.add(horizonRing);
 
-    // 3. Central Observer Gnomon / Stylus
+    // Gnomon
     const gnomonHeight = 12;
     const gnomonGroup = new THREE.Group();
-
-    const pinGeo = new THREE.CylinderGeometry(0.18, 0.45, gnomonHeight, 16);
-    const pinMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.85, roughness: 0.25 });
-    const pinMesh = new THREE.Mesh(pinGeo, pinMat);
+    const pinMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22, 0.5, gnomonHeight, 24),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
     pinMesh.position.y = gnomonHeight / 2;
-    pinMesh.castShadow = true;
+    pinMesh.userData.componentId = 3;
     gnomonGroup.add(pinMesh);
 
-    const tipGeo = new THREE.SphereGeometry(0.55, 16, 16);
-    const tipMat = new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0x553e00, metalness: 0.9, roughness: 0.1 });
-    const tipMesh = new THREE.Mesh(tipGeo, tipMat);
+    const tipMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.65, 24, 24),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
     tipMesh.position.y = gnomonHeight;
-    tipMesh.castShadow = true;
+    tipMesh.userData.componentId = 4;
     gnomonGroup.add(tipMesh);
 
-    const baseGeo = new THREE.CylinderGeometry(1.8, 2.4, 0.5, 24);
-    const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.5, roughness: 0.5 });
-    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-    baseMesh.position.y = 0.25;
+    const baseMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.9, 2.5, 0.6, 32),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    baseMesh.position.y = 0.3;
+    baseMesh.userData.componentId = 5;
     gnomonGroup.add(baseMesh);
-
-    // In-scene North pointer arrow (Arrowhead only at the northern boundary, stem line removed)
-    const arrowGroup = new THREE.Group();
-    const arrowHeadGeo = new THREE.ConeGeometry(0.9, 2.6, 8);
-    const arrowHeadMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-    const arrowHead = new THREE.Mesh(arrowHeadGeo, arrowHeadMat);
-    arrowHead.rotation.x = -Math.PI / 2;
-    arrowHead.position.set(0, 0.06, -dialRadius * 0.92);
-    arrowGroup.add(arrowHead);
-    celestialGroup.add(arrowGroup);
     celestialGroup.add(gnomonGroup);
 
-    // --- 1. The Sun Sub-systems ---
+    // North arrow
+    const arrowHead = new THREE.Mesh(
+      new THREE.ConeGeometry(1.0, 2.8, 16),
+      new THREE.MeshBasicMaterial({ color: 0x09090b })
+    );
+    arrowHead.rotation.x = -Math.PI / 2;
+    arrowHead.position.set(0, 0.08, -dialRadius * 0.92);
+    arrowHead.userData.componentId = 6;
+    celestialGroup.add(arrowHead);
+
+    // Sun
     const sunGroup = new THREE.Group();
-    const sunGeo = new THREE.SphereGeometry(2.3, 32, 32);
-    const sunMat = new THREE.MeshBasicMaterial({ color: 0xffeb60 });
-    const sunSphere = new THREE.Mesh(sunGeo, sunMat);
+    const sunSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(2.3, 32, 32),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    sunSphere.userData.componentId = 7;
     sunGroup.add(sunSphere);
 
-    const coronaGeo = new THREE.SphereGeometry(3.9, 24, 24);
-    const coronaMat = new THREE.MeshBasicMaterial({
-      color: 0xf59e0b,
-      transparent: true,
-      opacity: 0.4,
-      blending: THREE.AdditiveBlending
-    });
-    const sunCorona = new THREE.Mesh(coronaGeo, coronaMat);
+    const sunCorona = new THREE.Mesh(
+      new THREE.TorusGeometry(3.4, 0.14, 16, 48),
+      new THREE.MeshBasicMaterial({ color: 0x09090b })
+    );
+    sunCorona.userData.componentId = 8;
     sunGroup.add(sunCorona);
-
-    const sunLight = new THREE.DirectionalLight(0xfff8db, 1.8);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
-    const d = 35;
-    sunLight.shadow.camera.left = -d;
-    sunLight.shadow.camera.right = d;
-    sunLight.shadow.camera.top = d;
-    sunLight.shadow.camera.bottom = -d;
-    sunGroup.add(sunLight);
-
+    sunGroup.add(new THREE.DirectionalLight(0xffffff, 1));
     celestialGroup.add(sunGroup);
 
-    // --- 2. The Moon Sub-systems (Sharp, non-gradient lunar terminator phase) ---
-    const moonGroup = new THREE.Group();
-    const moonGeo = new THREE.SphereGeometry(1.6, 36, 36);
-
-    // Custom shader for crisp, step-function lunar terminator (no smooth gradient)
+    // Moon (cross-hatch shader)
     const moonShaderMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uSunPosition: { value: new THREE.Vector3(0, 0, 0) },
-        uLitColor: { value: new THREE.Color(0xf8fafc) },
-        uDarkColor: { value: new THREE.Color(0x0f172a) }
-      },
+      uniforms: { uSunPosition: { value: new THREE.Vector3() } },
       vertexShader: `
-        varying vec3 vNormal;
-        varying vec3 vWorldPosition;
+        varying vec3 vNormal, vWorldPosition;
         void main() {
           vNormal = normalize(mat3(modelMatrix) * normal);
-          vec4 worldPos = modelMatrix * vec4(position, 1.0);
-          vWorldPosition = worldPos.xyz;
-          gl_Position = projectionMatrix * viewMatrix * worldPos;
-        }
-      `,
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vWorldPosition = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }`,
       fragmentShader: `
         uniform vec3 uSunPosition;
-        uniform vec3 uLitColor;
-        uniform vec3 uDarkColor;
-        varying vec3 vNormal;
-        varying vec3 vWorldPosition;
+        varying vec3 vNormal, vWorldPosition;
         void main() {
-          vec3 lightDir = normalize(uSunPosition - vWorldPosition);
-          float dotNL = dot(normalize(vNormal), lightDir);
-          // Hard threshold boundary between daylight and shadow
-          vec3 color = dotNL >= 0.0 ? uLitColor : uDarkColor;
-          gl_FragColor = vec4(color, 1.0);
-        }
-      `
+          float dotNL = dot(normalize(vNormal), normalize(uSunPosition - vWorldPosition));
+          if (dotNL >= 0.0) {
+            gl_FragColor = vec4(1.0);
+          } else {
+            float h1 = mod(gl_FragCoord.x + gl_FragCoord.y, 5.0);
+            float h2 = mod(gl_FragCoord.x - gl_FragCoord.y, 5.0);
+            float ink = (h1 < 1.8 || h2 < 1.2) ? 0.08 : 0.85;
+            gl_FragColor = vec4(vec3(ink), 1.0);
+          }
+        }`
     });
-
-    const moonSphere = new THREE.Mesh(moonGeo, moonShaderMat);
+    const moonGroup = new THREE.Group();
+    const moonSphere = new THREE.Mesh(new THREE.SphereGeometry(1.65, 36, 36), moonShaderMat);
+    moonSphere.userData.componentId = 9;
     moonGroup.add(moonSphere);
-
-    const moonLight = new THREE.PointLight(0xa5c9ff, 0.35, 100);
-    moonGroup.add(moonLight);
-
     celestialGroup.add(moonGroup);
 
-    // Ambient Lighting
-    const ambientLight = new THREE.AmbientLight(0x1e293b, 1.0);
-    scene.add(ambientLight);
-
-    // Reverse Sundial: Center Ground Shadow Marker Line
-    const shadowLineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.05, 0), new THREE.Vector3(0, 0.05, 0)]);
-    const shadowLineMat = new THREE.LineBasicMaterial({ color: 0xfacc15, linewidth: 3, transparent: true, opacity: 0.9 });
-    const shadowLine = new THREE.Line(shadowLineGeo, shadowLineMat);
+    // Shadow line
+    const shadowLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.06, 0), new THREE.Vector3(0, 0.06, 0)]),
+      new THREE.LineBasicMaterial({ color: 0x09090b, linewidth: 3 })
+    );
     celestialGroup.add(shadowLine);
 
-    // Trajectory Meshes and Season Bands
+    // Trajectory & bands
     let sunTrajectoryMesh = null;
     let moonTrajectoryMesh = null;
     const seasonsBandGroup = new THREE.Group();
+    seasonsBandGroup.userData.noOutlinePass = true;
     celestialGroup.add(seasonsBandGroup);
-
-    // Moon Motion Band Group (Moon's declination sweep range ±28.5°)
     const moonBandGroup = new THREE.Group();
+    moonBandGroup.userData.noOutlinePass = true;
     celestialGroup.add(moonBandGroup);
 
-    /**
-     * Compute full 360-degree closed circular diurnal loop
-     */
-    function createClosedDiurnalLoop(calcFn, targetDate, radius, color, tubeRadius, opacity) {
-      const points = [];
-      const sampleCount = 96;
-      const startOfDay = new Date(targetDate);
-      startOfDay.setHours(0, 0, 0, 0);
-
-      for (let i = 0; i <= sampleCount; i++) {
-        const t = new Date(startOfDay.getTime() + (i / sampleCount) * 86400000);
-        const coord = calcFn(t, state.lat, state.lng);
-        points.push(Astro.toCartesian(coord.altitude, coord.azimuth, radius));
+    // ========== Geometry Helpers ==========
+    function disposeObject(obj) {
+      if (!obj) return;
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+        else obj.material.dispose();
       }
-
-      const curve = new THREE.CatmullRomCurve3(points, true);
-      const tubeGeo = new THREE.TubeGeometry(curve, 100, tubeRadius, 8, true);
-      const tubeMat = new THREE.MeshBasicMaterial({
-        color: color,
-        transparent: true,
-        opacity: opacity
-      });
-      return new THREE.Mesh(tubeGeo, tubeMat);
     }
 
-    /**
-     * Build Four Seasons Sun Orbit Band across the year (Without tube borders; clean translucent surface)
-     */
-    function updateSeasonsBand(lat) {
-      while (seasonsBandGroup.children.length > 0) {
-        const obj = seasonsBandGroup.children[0];
-        seasonsBandGroup.remove(obj);
-        if (obj.geometry) obj.geometry.dispose();
+    function clearGroup(group) {
+      while (group.children.length) {
+        const c = group.children[0];
+        group.remove(c);
+        disposeObject(c);
       }
+    }
 
+    function createClosedDiurnalLoop(calcFn, targetDate, radius, tubeRadius, componentId) {
+      const points = [];
+      const start = new Date(targetDate);
+      start.setHours(0, 0, 0, 0);
+      for (let i = 0; i <= 96; i++) {
+        const t = new Date(start.getTime() + (i / 96) * 86400000);
+        const c = calcFn(t, state.lat, state.lng);
+        points.push(Astro.toCartesian(c.altitude, c.azimuth, radius));
+      }
+      const curve = new THREE.CatmullRomCurve3(points, true);
+      const mesh = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 100, tubeRadius, 12, true),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      mesh.userData.componentId = componentId;
+      return mesh;
+    }
+
+    function createDeclinationBoundaryLine(lat, decRad, radius, opacity) {
+      const phi = lat * Astro.rad;
+      const pts = [];
+      for (let i = 0; i <= 96; i++) {
+        const H = (i / 96) * Math.PI * 2;
+        const sinAlt = Math.sin(phi) * Math.sin(decRad) + Math.cos(phi) * Math.cos(decRad) * Math.cos(H);
+        const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
+        const cosAz = (Math.sin(decRad) - Math.sin(phi) * Math.sin(alt)) / (Math.cos(phi) * Math.cos(alt) + 1e-7);
+        let az = Math.acos(Math.max(-1, Math.min(1, cosAz)));
+        if (Math.sin(H) > 0) az = 2 * Math.PI - az;
+        pts.push(Astro.toCartesian(alt * Astro.deg, ((az * Astro.deg) + 180) % 360, radius));
+      }
+      return new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color: 0x09090b, transparent: true, opacity })
+      );
+    }
+
+    function updateSeasonsBand(lat) {
+      clearGroup(seasonsBandGroup);
       if (!state.visibleLayers.sun) return;
 
       const phi = lat * Astro.rad;
       const eps = 23.439 * Astro.rad;
-
-      // Pure translucent band surface without edge wireframes
-      const bandWidthSegments = 72;
-      const bandHeightSegments = 16;
-      const bandGeo = new THREE.BufferGeometry();
+      const wSeg = 72, hSeg = 8;
       const vertices = [];
       const indices = [];
 
-      for (let j = 0; j <= bandHeightSegments; j++) {
-        const fraction = j / bandHeightSegments;
-        const dec = -eps + fraction * (2 * eps);
-        
-        for (let i = 0; i <= bandWidthSegments; i++) {
-          const H = (i / bandWidthSegments) * Math.PI * 2;
+      for (let j = 0; j <= hSeg; j++) {
+        const dec = -eps + (j / hSeg) * (2 * eps);
+        for (let i = 0; i <= wSeg; i++) {
+          const H = (i / wSeg) * Math.PI * 2;
           const sinAlt = Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H);
           const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
           const cosAz = (Math.sin(dec) - Math.sin(phi) * Math.sin(alt)) / (Math.cos(phi) * Math.cos(alt) + 1e-7);
           let az = Math.acos(Math.max(-1, Math.min(1, cosAz)));
           if (Math.sin(H) > 0) az = 2 * Math.PI - az;
-          const azDeg = ((az * Astro.deg) + 180) % 360;
-
-          const p = Astro.toCartesian(alt * Astro.deg, azDeg, state.sunRadius);
+          const p = Astro.toCartesian(alt * Astro.deg, ((az * Astro.deg) + 180) % 360, state.sunRadius);
           vertices.push(p.x, p.y, p.z);
         }
       }
-
-      for (let j = 0; j < bandHeightSegments; j++) {
-        for (let i = 0; i < bandWidthSegments; i++) {
-          const a = j * (bandWidthSegments + 1) + i;
-          const b = (j + 1) * (bandWidthSegments + 1) + i;
-          const c = (j + 1) * (bandWidthSegments + 1) + (i + 1);
-          const d = j * (bandWidthSegments + 1) + (i + 1);
-          indices.push(a, b, d);
-          indices.push(b, c, d);
+      for (let j = 0; j < hSeg; j++) {
+        for (let i = 0; i < wSeg; i++) {
+          const a = j * (wSeg + 1) + i;
+          const b = (j + 1) * (wSeg + 1) + i;
+          const c = (j + 1) * (wSeg + 1) + (i + 1);
+          const d = j * (wSeg + 1) + (i + 1);
+          indices.push(a, b, d, b, c, d);
         }
       }
 
-      bandGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-      bandGeo.setIndex(indices);
-      bandGeo.computeVertexNormals();
-
-      const bandMat = new THREE.MeshBasicMaterial({
-        color: 0xf59e0b,
-        transparent: true,
-        opacity: 0.12,
-        side: THREE.DoubleSide,
-        depthWrite: false
-      });
-      seasonsBandGroup.add(new THREE.Mesh(bandGeo, bandMat));
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      seasonsBandGroup.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color: 0x09090b, transparent: true, opacity: 0.04, side: THREE.DoubleSide, depthWrite: false
+      })));
+      seasonsBandGroup.add(createDeclinationBoundaryLine(lat, eps, state.sunRadius, 0.35));
+      seasonsBandGroup.add(createDeclinationBoundaryLine(lat, -eps, state.sunRadius, 0.35));
     }
 
-    /**
-     * Build Moon orbit range band (Pure translucent surface without edge lines)
-     */
     function updateMoonBand(lat) {
-      while (moonBandGroup.children.length > 0) {
-        const obj = moonBandGroup.children[0];
-        moonBandGroup.remove(obj);
-        if (obj.geometry) obj.geometry.dispose();
-      }
-
+      clearGroup(moonBandGroup);
       if (!state.visibleLayers.moon) return;
-
-      const phi = lat * Astro.rad;
-      const moonMaxDec = (23.439 + 5.145) * Astro.rad;
-
-      const bandWidthSegments = 72;
-      const bandHeightSegments = 12;
-      const bandGeo = new THREE.BufferGeometry();
-      const vertices = [];
-      const indices = [];
-
-      for (let j = 0; j <= bandHeightSegments; j++) {
-        const fraction = j / bandHeightSegments;
-        const dec = -moonMaxDec + fraction * (2 * moonMaxDec);
-        
-        for (let i = 0; i <= bandWidthSegments; i++) {
-          const H = (i / bandWidthSegments) * Math.PI * 2;
-          const sinAlt = Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H);
-          const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
-          const cosAz = (Math.sin(dec) - Math.sin(phi) * Math.sin(alt)) / (Math.cos(phi) * Math.cos(alt) + 1e-7);
-          let az = Math.acos(Math.max(-1, Math.min(1, cosAz)));
-          if (Math.sin(H) > 0) az = 2 * Math.PI - az;
-          const azDeg = ((az * Astro.deg) + 180) % 360;
-
-          const p = Astro.toCartesian(alt * Astro.deg, azDeg, state.moonRadius);
-          vertices.push(p.x, p.y, p.z);
-        }
-      }
-
-      for (let j = 0; j < bandHeightSegments; j++) {
-        for (let i = 0; i < bandWidthSegments; i++) {
-          const a = j * (bandWidthSegments + 1) + i;
-          const b = (j + 1) * (bandWidthSegments + 1) + i;
-          const c = (j + 1) * (bandWidthSegments + 1) + (i + 1);
-          const d = j * (bandWidthSegments + 1) + (i + 1);
-          indices.push(a, b, d);
-          indices.push(b, c, d);
-        }
-      }
-
-      bandGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-      bandGeo.setIndex(indices);
-      bandGeo.computeVertexNormals();
-
-      const bandMat = new THREE.MeshBasicMaterial({
-        color: 0x93c5fd,
-        transparent: true,
-        opacity: 0.08,
-        side: THREE.DoubleSide,
-        depthWrite: false
-      });
-      moonBandGroup.add(new THREE.Mesh(bandGeo, bandMat));
+      const maxDec = (23.439 + 5.145) * Astro.rad;
+      moonBandGroup.add(createDeclinationBoundaryLine(lat, maxDec, state.moonRadius, 0.22));
+      moonBandGroup.add(createDeclinationBoundaryLine(lat, -maxDec, state.moonRadius, 0.22));
     }
 
-    /**
-     * Rebuild Sun and Moon diurnal cycles
-     */
     function updateDiurnalTrajectories() {
-      const activeDate = getActiveDate();
-
       if (sunTrajectoryMesh) {
         celestialGroup.remove(sunTrajectoryMesh);
-        sunTrajectoryMesh.geometry.dispose();
+        disposeObject(sunTrajectoryMesh);
         sunTrajectoryMesh = null;
       }
       if (moonTrajectoryMesh) {
         celestialGroup.remove(moonTrajectoryMesh);
-        moonTrajectoryMesh.geometry.dispose();
+        disposeObject(moonTrajectoryMesh);
         moonTrajectoryMesh = null;
       }
 
+      const activeDate = getActiveDate();
       if (state.visibleLayers.sun) {
         sunTrajectoryMesh = createClosedDiurnalLoop(
-          (t, lat, lng) => Astro.getSunPosition(t, lat, lng),
-          activeDate,
-          state.sunRadius,
-          0xf59e0b,
-          0.26,
-          0.55
+          Astro.getSunPosition.bind(Astro), activeDate, state.sunRadius, 0.32, 10
         );
         celestialGroup.add(sunTrajectoryMesh);
       }
-
       if (state.visibleLayers.moon) {
         moonTrajectoryMesh = createClosedDiurnalLoop(
-          (t, lat, lng) => Astro.getMoonPosition(t, lat, lng),
-          activeDate,
-          state.moonRadius,
-          0x93c5fd,
-          0.20,
-          0.45
+          Astro.getMoonPosition.bind(Astro), activeDate, state.moonRadius, 0.22, 11
         );
         celestialGroup.add(moonTrajectoryMesh);
       }
-
       updateSeasonsBand(state.lat);
       updateMoonBand(state.lat);
+      EdgePostProcessor.refreshOutlineList();
     }
 
-    function applyDayNightTheme(isDay) {
-      if (state.isDayMode === isDay) return;
-      state.isDayMode = isDay;
-
-      if (isDay) {
-        body.classList.remove('theme-night');
-        body.classList.add('theme-day');
-        renderer.setClearColor(0xe2e8f0, 1.0);
-        dialDiscMat.color.setHex(0xcfd8dc);
-        dialDiscMat.opacity = 0.85;
-        ambientLight.color.setHex(0xffffff);
-        ambientLight.intensity = 1.3;
-        horizonRing.material.color.setHex(0x0284c7);
-      } else {
-        body.classList.remove('theme-day');
-        body.classList.add('theme-night');
-        renderer.setClearColor(0x030712, 1.0);
-        dialDiscMat.color.setHex(0x070c18);
-        dialDiscMat.opacity = 0.75;
-        ambientLight.color.setHex(0x1e293b);
-        ambientLight.intensity = 0.9;
-        horizonRing.material.color.setHex(0x38bdf8);
-      }
-    }
-
-    /**
-     * Compute and render current positions of Sun, Moon and reverse shadows
-     */
+    // ========== Celestial Update ==========
     function updateCelestialState() {
       const activeDate = getActiveDate();
-
-      // 1. Calculate Sun Position
       const sunCoord = Astro.getSunPosition(activeDate, state.lat, state.lng);
       const isSunAbove = sunCoord.altitude > 0;
-      
-      // Update Day/Night Theme based on Sun altitude
-      applyDayNightTheme(isSunAbove);
 
       const sunPos = Astro.toCartesian(sunCoord.altitude, sunCoord.azimuth, state.sunRadius);
       sunGroup.position.copy(sunPos);
-
-      // Pass current sun position to moon shader for sharp lunar phase calculation
       moonShaderMat.uniforms.uSunPosition.value.copy(sunPos);
 
       if (state.visibleLayers.sun) {
         sunGroup.visible = true;
+        sunSphere.material.color.setHex(isSunAbove ? 0xffffff : 0xd4d4d8);
+        sunCorona.visible = isSunAbove;
         if (isSunAbove) {
-          sunSphere.material.color.setHex(0xffeb60);
-          sunCorona.visible = true;
-          sunLight.intensity = Math.max(0.3, Math.sin(sunCoord.altitude * Astro.rad) * 2.0);
-        } else {
-          sunSphere.material.color.setHex(0xb45309);
-          sunCorona.visible = false;
-          sunLight.intensity = 0;
-        }
-
-        // Reverse Sundial Ground Shadow
-        if (isSunAbove) {
-          const shadowLength = Math.min(dialRadius, gnomonHeight / Math.tan(Math.max(3 * Astro.rad, sunCoord.altitude * Astro.rad)));
-          const shadowAzRad = (sunCoord.azimuth + 180) * Astro.rad;
-          const shadowX = shadowLength * Math.sin(shadowAzRad);
-          const shadowZ = -shadowLength * Math.cos(shadowAzRad);
-
-          shadowLine.geometry.setFromPoints([new THREE.Vector3(0, 0.04, 0), new THREE.Vector3(shadowX, 0.04, shadowZ)]);
+          const shadowLen = Math.min(dialRadius, gnomonHeight / Math.tan(Math.max(3 * Astro.rad, sunCoord.altitude * Astro.rad)));
+          const az = (sunCoord.azimuth + 180) * Astro.rad;
+          shadowLine.geometry.setFromPoints([
+            new THREE.Vector3(0, 0.06, 0),
+            new THREE.Vector3(shadowLen * Math.sin(az), 0.06, -shadowLen * Math.cos(az))
+          ]);
           shadowLine.visible = true;
         } else {
           shadowLine.visible = false;
@@ -989,345 +756,189 @@
       } else {
         sunGroup.visible = false;
         shadowLine.visible = false;
-        sunLight.intensity = 0;
       }
 
-      // 2. Calculate Moon Position
       const moonCoord = Astro.getMoonPosition(activeDate, state.lat, state.lng);
-      const moonPos = Astro.toCartesian(moonCoord.altitude, moonCoord.azimuth, state.moonRadius);
-      moonGroup.position.copy(moonPos);
+      moonGroup.position.copy(Astro.toCartesian(moonCoord.altitude, moonCoord.azimuth, state.moonRadius));
+      moonGroup.visible = state.visibleLayers.moon;
 
-      if (state.visibleLayers.moon) {
-        moonGroup.visible = true;
-      } else {
-        moonGroup.visible = false;
-      }
-
-      // 3. Update Realtime Labels & Telemetry Dashboard
       updateDashboardData(activeDate, sunCoord, moonCoord);
     }
 
-    function updateDashboardData(activeDate, sunCoord, moonCoord) {
-      // Format Active Date
-      const pad = (n) => String(n).padStart(2, '0');
-      const year = activeDate.getFullYear();
-      const month = pad(activeDate.getMonth() + 1);
-      const day = pad(activeDate.getDate());
-      const hours = pad(activeDate.getHours());
-      const minutes = pad(activeDate.getMinutes());
+    // ========== UI ==========
+    const labelLat = document.getElementById('label-lat');
+    const labelSeason = document.getElementById('label-season');
+    const labelTime = document.getElementById('label-time');
+    const sliderLat = document.getElementById('slider-lat');
+    const sliderSeason = document.getElementById('slider-season');
+    const sliderTime = document.getElementById('slider-time');
+    const btnResetLat = document.getElementById('btn-reset-lat');
+    const btnResetSeason = document.getElementById('btn-reset-season');
+    const btnResetTime = document.getElementById('btn-reset-time');
+    const btnToggleSun = document.getElementById('btn-toggle-sun');
+    const btnToggleMoon = document.getElementById('btn-toggle-moon');
+    const btnToggleInfo = document.getElementById('btn-toggle-info');
+    const infoDashboard = document.getElementById('info-dashboard');
+    const controlPanel = document.getElementById('control-panel');
+    const northIndicatorHUD = document.getElementById('north-indicator-hud');
+    const northArrowSvg = document.getElementById('north-arrow-svg');
 
-      // Slider visual indicators
-      labelLat.textContent = `${Math.abs(state.lat).toFixed(1)}° ${state.lat >= 0 ? 'N' : 'S'}`;
-      
-      const dayDiff = Math.round(state.seasonOffsetDays);
-      if (dayDiff === 0) {
-        labelSeason.textContent = '今日';
-      } else {
-        const m = activeDate.getMonth() + 1;
-        const d = activeDate.getDate();
-        labelSeason.textContent = `${m}/${d}`;
-      }
-      
-      labelTime.textContent = `${hours}:${minutes}`;
-
-      // Dashboard
-      dashDatetime.textContent = `${year}-${month}-${day} ${hours}:${minutes}`;
-      
-      // Calculate Solstice/Equinox rough indicator based on solar declination
-      const dec = sunCoord.declination;
-      let term = "春/秋分帶";
-      if (dec > 15) term = "夏至帶 (北歸線)";
-      else if (dec < -15) term = "冬至帶 (南歸線)";
-      dashSeasonTerm.textContent = term;
-
-      dashSunAlt.textContent = `${sunCoord.altitude >= 0 ? '+' : ''}${sunCoord.altitude.toFixed(1)}°`;
-      dashSunAz.textContent = `${sunCoord.azimuth.toFixed(1)}°`;
-      dashMoonAlt.textContent = `${moonCoord.altitude >= 0 ? '+' : ''}${moonCoord.altitude.toFixed(1)}°`;
-      dashMoonAz.textContent = `${moonCoord.azimuth.toFixed(1)}°`;
-      dashMoonPhase.textContent = moonCoord.phaseName;
-      dashLatVal.textContent = `${Math.abs(state.lat).toFixed(1)}° ${state.lat >= 0 ? 'N' : 'S'}`;
+    function getMoonPhaseName(fraction, age) {
+      if (fraction < 0.04) return '新月 (朔)';
+      if (fraction > 0.96) return '望月 (滿月)';
+      if (age < 7.4) return '眉月';
+      if (age < 8.8) return '上弦月';
+      if (age < 14.7) return '盈凸月';
+      if (age < 22.1) return '虧凸月';
+      if (age < 23.5) return '下弦月';
+      return '殘月';
     }
 
+    function updateDashboardData(date, sun, moon) {
+      const pad = n => String(n).padStart(2, '0');
+      const y = date.getFullYear(), m = pad(date.getMonth() + 1), d = pad(date.getDate());
+      const h = pad(date.getHours()), min = pad(date.getMinutes());
+      document.getElementById('dash-datetime').textContent = `${y}-${m}-${d} ${h}:${min}`;
+
+      const day = date.getDate(), month = date.getMonth() + 1;
+      let term = '平氣時節';
+      if ((month === 3 && day >= 19 && day <= 22) || (month === 9 && day >= 21 && day <= 24)) term = '二分帶 (春秋分)';
+      else if (month === 6 && day >= 20 && day <= 23) term = '二至帶 (夏至)';
+      else if (month === 12 && day >= 20 && day <= 23) term = '二至帶 (冬至)';
+      document.getElementById('dash-season-term').textContent = term;
+
+      document.getElementById('dash-sun-alt').textContent = `${sun.altitude >= 0 ? '+' : ''}${sun.altitude.toFixed(1)}°`;
+      document.getElementById('dash-sun-az').textContent = `${sun.azimuth.toFixed(1)}°`;
+      document.getElementById('dash-moon-alt').textContent = `${moon.altitude >= 0 ? '+' : ''}${moon.altitude.toFixed(1)}°`;
+      document.getElementById('dash-moon-az').textContent = `${moon.azimuth.toFixed(1)}°`;
+      document.getElementById('dash-moon-phase').textContent = getMoonPhaseName(moon.phaseFraction, moon.moonAge);
+      document.getElementById('dash-lat-val').textContent = `${Math.abs(state.lat).toFixed(1)}° ${state.lat >= 0 ? 'N' : 'S'}`;
+
+      labelLat.textContent = `${Math.abs(state.lat).toFixed(1)}° ${state.lat >= 0 ? 'N' : 'S'}`;
+      labelSeason.textContent = state.seasonDayOffset === 0 ? '今日' : `${m}/${d}`;
+      labelTime.textContent = `${h}:${min}`;
+    }
+
+    function updateNorthIndicatorHUD() {
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      dir.y = 0;
+      dir.normalize();
+      northArrowSvg.style.transform = `rotate(${Math.atan2(dir.x, -dir.z) * Astro.deg}deg)`;
+    }
+
+    let isResettingCamera = false;
+    function resetCameraToNorthDefault() {
+      if (isResettingCamera) return;
+      isResettingCamera = true;
+      const startPos = camera.position.clone();
+      const targetPos = new THREE.Vector3(0, 42, 98);
+      const startTarget = controls.target.clone();
+      const endTarget = new THREE.Vector3(0, 0, 0);
+      const t0 = performance.now();
+      const duration = 800;
+
+      function anim(t) {
+        const p = Math.min(1, (t - t0) / duration);
+        const ease = p < 0.5 ? 4 * p * p * p : (p - 1) * (2 * p - 2) * (2 * p - 2) + 1;
+        camera.position.lerpVectors(startPos, targetPos, ease);
+        controls.target.lerpVectors(startTarget, endTarget, ease);
+        controls.update();
+        state.cameraMoved = true;
+        if (p < 1) requestAnimationFrame(anim);
+        else isResettingCamera = false;
+      }
+      requestAnimationFrame(anim);
+    }
+    northIndicatorHUD.addEventListener('click', resetCameraToNorthDefault);
+
+    // ========== Tutorial ==========
     const TutorialGuide = {
       currentStep: 0,
-      isActive: true,
+      totalSteps: 6,
       steps: [
-        {
-          badge: "步驟 1 / 6",
-          icon: "🔄",
-          title: "轉動與縮放視角",
-          desc: "於畫面任意處滑動或拖曳，即可 360° 旋轉天體環景；滾輪或兩指滑動可大幅縮放觀察距。",
-          action: () => {
-            closePanel();
-            infoDashboard.classList.add('hidden');
-            // Subtle camera pan to demonstrate orbital freedom
-            controls.autoRotate = true;
-            controls.autoRotateSpeed = 2.5;
-            setTimeout(() => { controls.autoRotate = false; }, 1800);
-          }
-        },
-        {
-          badge: "步驟 2 / 6",
-          icon: "👆👆",
-          title: "連按兩下呼出面板",
-          desc: "在主畫面空白處快速連點兩下（或手機雙擊），即可展開多維度時空操作面板。",
-          action: () => {
-            controls.autoRotate = false;
-            openPanel();
-            panel.classList.add('tutorial-highlight');
-          }
-        },
-        {
-          badge: "步驟 3 / 6",
-          icon: "🎚️",
-          title: "拖曳滑桿連續觀測",
-          desc: "拖曳緯度、時節與日夜滑桿可快轉天體運行。拖曳時面板自動透光至 5%，方便無遮擋對比變化。",
-          action: () => {
-            openPanel();
-            panel.classList.remove('tutorial-highlight');
-            // Briefly demo the translucent drag effect
-            panel.classList.add('panel-dragging');
-            setTimeout(() => {
-              panel.classList.remove('panel-dragging');
-            }, 1200);
-          }
-        },
-        {
-          badge: "步驟 4 / 6",
-          icon: "ⓘ",
-          title: "展開詳細天體數據",
-          desc: "點選 ⓘ 按鈕可開合天體即時座標面板，查看太陽與月球的高度角、方位角與當前月相。",
-          action: () => {
-            openPanel();
-            infoDashboard.classList.remove('hidden');
-            btnToggleInfo.classList.add('bg-amber-500/20', 'border-amber-500/60', 'text-amber-500', 'tutorial-highlight');
-          }
-        },
-        {
-          badge: "步驟 5 / 6",
-          icon: "👆",
-          title: "單擊外側隱藏面板",
-          desc: "在面板外隨意點擊一下，面板即平滑收合隱藏，隨時還原純粹天幕視野。",
-          action: () => {
-            btnToggleInfo.classList.remove('tutorial-highlight');
-            closePanel();
-          }
-        },
-        {
-          badge: "步驟 6 / 6",
-          icon: "🧭",
-          title: "指南針重設角度",
-          desc: "右上角箭頭始終指向正北。隨時點按指南針，天球即自動復位並將北方對齊螢幕上方！",
-          action: () => {
-            closePanel();
-            northHud.classList.add('tutorial-highlight', 'animate-pulse-subtle');
-            resetCameraToNorth();
-          }
-        }
+        { title: '🔄 探索視角與天球位姿', desc: '在畫面上任意滑動、拖曳可旋轉觀測天球視角；滾輪或雙指可縮放距離。', target: null, action: () => closeControlPanel() },
+        { title: '👆👆 喚出控制面板', desc: '在畫面上任何空白處連按兩下（Double Click / Tap），即可展開隱藏的控制面板。', target: 'control-panel', action: () => { openControlPanel(); controlPanel.classList.add('tutorial-highlight'); } },
+        { title: '🎚️ 滑動觀察即時變化', desc: '拖曳緯度、時節或時間滑桿時，面板會自動切換為 5% 穿透半透明，讓你清楚直視天體動態。', target: 'control-panel', action: () => { openControlPanel(); controlPanel.classList.add('tutorial-highlight', 'panel-dragging'); setTimeout(() => controlPanel.classList.remove('panel-dragging'), 1200); } },
+        { title: 'ⓘ 展開天體儀表板', desc: '點擊 ⓘ 按鈕可展開或折疊太陽高度角、方位角與月相即時天文數據儀表板。', target: 'btn-toggle-info', action: () => { openControlPanel(); infoDashboard.classList.remove('hidden'); btnToggleInfo.classList.add('bg-black', 'text-white', 'tutorial-highlight'); } },
+        { title: '👆 單擊隱藏面板', desc: '在控制面板以外的空白處單擊一下，即可將面板隱藏，回歸純粹的無干擾觀測體驗。', target: null, action: () => closeControlPanel() },
+        { title: '🧭 點擊指南針復位視角', desc: '點擊右上角指南針標記，天球會平滑恢復為預設視角，並自動將北方精確對齊螢幕上方！', target: 'north-indicator-hud', action: () => { northIndicatorHUD.classList.add('tutorial-highlight'); resetCameraToNorthDefault(); } }
       ],
 
       init() {
-        const modal = document.getElementById('tutorial-modal');
         const badge = document.getElementById('tut-step-badge');
         const title = document.getElementById('tut-title');
         const desc = document.getElementById('tut-desc');
         const dots = document.getElementById('tut-dots');
-        const btnNext = document.getElementById('btn-next-tutorial');
         const btnPrev = document.getElementById('btn-prev-tutorial');
+        const btnNext = document.getElementById('btn-next-tutorial');
         const btnSkip = document.getElementById('btn-skip-tutorial');
 
-        const updateUI = () => {
-          const stepData = this.steps[this.currentStep];
-          badge.textContent = stepData.badge;
-          title.innerHTML = `<span>${stepData.icon}</span> ${stepData.title}`;
-          desc.textContent = stepData.desc;
-
-          // Update dots
-          const dotElements = dots.querySelectorAll('span');
-          dotElements.forEach((dot, idx) => {
-            if (idx === this.currentStep) {
-              dot.className = "w-2 h-2 rounded-full bg-amber-500 scale-125 transition";
-            } else {
-              dot.className = "w-2 h-2 rounded-full bg-current/20 transition";
-            }
+        const render = () => {
+          document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+          const s = this.steps[this.currentStep];
+          badge.textContent = `步驟 ${this.currentStep + 1} / ${this.totalSteps}`;
+          title.innerHTML = s.title;
+          desc.textContent = s.desc;
+          btnPrev.classList.toggle('hidden', this.currentStep === 0);
+          btnNext.textContent = this.currentStep === this.totalSteps - 1 ? '開始體驗 ✓' : '下一步 ➔';
+          dots.querySelectorAll('span').forEach((dot, i) => {
+            dot.className = i === this.currentStep ? 'w-2 h-2 rounded-full bg-black scale-125 transition' : 'w-2 h-2 rounded-full bg-black/20 transition';
           });
-
-          // Previous button visibility
-          if (this.currentStep > 0) {
-            btnPrev.classList.remove('hidden');
-          } else {
-            btnPrev.classList.add('hidden');
+          s.action();
+          if (s.target) {
+            const el = document.getElementById(s.target);
+            if (el) el.classList.add('tutorial-highlight');
           }
-
-          // Next button text
-          if (this.currentStep === this.steps.length - 1) {
-            btnNext.textContent = "開始探索 ✨";
-          } else {
-            btnNext.textContent = "下一步 ➔";
-          }
-
-          // Run contextual scene action
-          stepData.action();
         };
 
-        const endTutorial = () => {
-          this.isActive = false;
-          modal.classList.add('opacity-0', 'pointer-events-none', '-translate-y-4');
-          setTimeout(() => {
-            modal.style.display = 'none';
-          }, 350);
-
-          // Clear any leftover tutorial highlights
-          panel.classList.remove('tutorial-highlight', 'panel-dragging');
-          btnToggleInfo.classList.remove('tutorial-highlight');
-          northHud.classList.remove('tutorial-highlight', 'animate-pulse-subtle');
-          controls.autoRotate = false;
-        };
-
-        btnNext.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (this.currentStep < this.steps.length - 1) {
-            this.currentStep++;
-            updateUI();
-          } else {
-            endTutorial();
-          }
+        btnNext.addEventListener('click', () => {
+          if (this.currentStep < this.totalSteps - 1) { this.currentStep++; render(); }
+          else this.finish();
         });
+        btnPrev.addEventListener('click', () => { if (this.currentStep > 0) { this.currentStep--; render(); } });
+        btnSkip.addEventListener('click', () => this.finish());
+        render();
+      },
 
-        btnPrev.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (this.currentStep > 0) {
-            this.currentStep--;
-            updateUI();
-          }
-        });
-
-        btnSkip.addEventListener('click', (e) => {
-          e.stopPropagation();
-          endTutorial();
-        });
-
-        // Trigger step 1 initially
-        updateUI();
+      finish() {
+        const modal = document.getElementById('tutorial-modal');
+        modal.classList.add('opacity-0', 'pointer-events-none', 'scale-90');
+        setTimeout(() => modal.remove(), 400);
+        document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+        closeControlPanel();
+        resetCameraToNorthDefault();
       }
     };
 
-    /**
-     * Keep North Arrow Compass HUD synchronized with camera azimuth
-     */
-    function updateNorthIndicatorHUD() {
-      const forward = new THREE.Vector3();
-      camera.getWorldDirection(forward);
-      const angle = Math.atan2(forward.x, -forward.z);
-      northArrowSvg.style.transform = `rotate(${-angle * Astro.deg}deg)`;
+    // ========== Panel Control ==========
+    function openControlPanel() {
+      state.isControlPanelOpen = true;
+      state.panelOpenTime = performance.now();
+      controlPanel.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+      controlPanel.classList.add('opacity-100', 'pointer-events-auto', 'scale-100');
+    }
+    function closeControlPanel() {
+      state.isControlPanelOpen = false;
+      controlPanel.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+      controlPanel.classList.remove('opacity-100', 'pointer-events-auto', 'scale-100', 'panel-dragging');
     }
 
-    // Smooth reset camera to default orientation (North pointing up screen)
-    let isResettingCamera = false;
-    function resetCameraToNorth() {
-      if (isResettingCamera) return;
-      isResettingCamera = true;
-
-      const startPos = camera.position.clone();
-      const targetPos = new THREE.Vector3(0, 38, 92);
-      const startTarget = controls.target.clone();
-      const endTarget = new THREE.Vector3(0, 0, 0);
-      
-      const duration = 650; // ms
-      const startTime = performance.now();
-
-      function step(now) {
-        const elapsed = now - startTime;
-        const progress = Math.min(1, elapsed / duration);
-        // Smooth easeInOutCubic curve
-        const ease = progress < 0.5 
-          ? 4 * progress * progress * progress 
-          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-
-        camera.position.lerpVectors(startPos, targetPos, ease);
-        controls.target.lerpVectors(startTarget, endTarget, ease);
-        controls.update();
-
-        if (progress < 1) {
-          requestAnimationFrame(step);
-        } else {
-          isResettingCamera = false;
-        }
-      }
-      requestAnimationFrame(step);
-    }
-
-    const northHud = document.getElementById('north-indicator-hud');
-    northHud.addEventListener('click', (e) => {
-      e.stopPropagation();
-      resetCameraToNorth();
+    // Double-click / double-tap to open
+    window.addEventListener('dblclick', e => {
+      if (controlPanel.contains(e.target) || northIndicatorHUD.contains(e.target)) return;
+      openControlPanel();
     });
 
-    // --- Panel Visibility & Interactive Gesture Management ---
-    let isPanelOpen = false;
-    let lastOpenTime = 0;
-    let pointerDownPos = { x: 0, y: 0 };
-    let isDraggingPointer = false;
-
-    function openPanel() {
-      isPanelOpen = true;
-      lastOpenTime = performance.now();
-      panel.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
-      panel.classList.add('opacity-100', 'pointer-events-auto', 'scale-100');
-    }
-
-    function closePanel() {
-      isPanelOpen = false;
-      panel.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
-      panel.classList.remove('opacity-100', 'pointer-events-auto', 'scale-100');
-    }
-
-    // Track pointer movement to differentiate 3D orbit dragging from clicks
-    window.addEventListener('pointerdown', (e) => {
-      pointerDownPos = { x: e.clientX, y: e.clientY };
-      isDraggingPointer = false;
-    }, { passive: true });
-
-    window.addEventListener('pointermove', (e) => {
-      const dx = e.clientX - pointerDownPos.x;
-      const dy = e.clientY - pointerDownPos.y;
-      if (Math.hypot(dx, dy) > 8) {
-        isDraggingPointer = true; // User is orbiting/panning the celestial dome
-      }
-    }, { passive: true });
-
-    // Double-click triggers panel
-    window.addEventListener('dblclick', (e) => {
-      if (panel.contains(e.target) || northHud.contains(e.target)) return;
-      openPanel();
-    });
-
-    // Single click outside hides panel (ignores camera orbit drags and prevents instant closes)
-    window.addEventListener('pointerup', (e) => {
-      if (isDraggingPointer) return; // Ignore drag release
-      if (panel.contains(e.target) || e.target === panel) return; // Inside panel
-      if (northHud.contains(e.target) || e.target === northHud) return; // Compass click ignored
-      if (!isPanelOpen) return;
-      
-      // Prevent closure right after dblclick/double-tap trigger
-      if (performance.now() - lastOpenTime < 350) return;
-
-      closePanel();
-    });
-
-    // Mobile double-tap detection
-    let lastTapTime = 0;
-    let lastTapPos = { x: 0, y: 0 };
-    window.addEventListener('touchend', (e) => {
-      if (panel.contains(e.target) || northHud.contains(e.target)) return;
-      if (isDraggingPointer) return;
-
+    let lastTapTime = 0, lastTapPos = { x: 0, y: 0 };
+    window.addEventListener('touchend', e => {
+      if (controlPanel.contains(e.target) || northIndicatorHUD.contains(e.target) || isDragGesture) return;
+      const touch = e.changedTouches?.[0];
+      if (!touch) return;
       const now = performance.now();
-      const touch = e.changedTouches[0];
       const dist = Math.hypot(touch.clientX - lastTapPos.x, touch.clientY - lastTapPos.y);
-
       if (now - lastTapTime < 320 && dist < 30) {
-        openPanel();
+        openControlPanel();
         lastTapTime = 0;
       } else {
         lastTapTime = now;
@@ -1335,126 +946,128 @@
       }
     });
 
-    // --- Slider Dragging Transparency Handling (Drops panel to 5% opacity, thumb stays) ---
-    function attachSliderDragEffect(slider) {
-      const startDrag = () => {
-        panel.classList.add('panel-dragging');
-      };
-      const endDrag = () => {
-        panel.classList.remove('panel-dragging');
-      };
+    // Click outside to close
+    let pointerDownPos = { x: 0, y: 0 };
+    let isDragGesture = false;
+    window.addEventListener('pointerdown', e => {
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+      isDragGesture = false;
+    });
+    window.addEventListener('pointermove', e => {
+      if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) > 7) isDragGesture = true;
+    });
+    window.addEventListener('pointerup', e => {
+      if (!state.isControlPanelOpen || isDragGesture || performance.now() - state.panelOpenTime < 280) return;
+      if (!controlPanel.contains(e.target) && !northIndicatorHUD.contains(e.target)) closeControlPanel();
+    });
 
-      slider.addEventListener('mousedown', startDrag);
-      slider.addEventListener('touchstart', startDrag, { passive: true });
+    // Slider drag transparency
+    [sliderLat, sliderSeason, sliderTime].forEach(s => {
+      const start = () => controlPanel.classList.add('panel-dragging');
+      const end = () => controlPanel.classList.remove('panel-dragging');
+      s.addEventListener('mousedown', start);
+      s.addEventListener('touchstart', start, { passive: true });
+      s.addEventListener('mouseup', end);
+      s.addEventListener('touchend', end);
+    });
 
-      window.addEventListener('mouseup', endDrag);
-      window.addEventListener('touchend', endDrag);
+    // Throttled trajectory update
+    let trajectoryTimer = null;
+    function scheduleTrajectoryUpdate() {
+      if (trajectoryTimer) return;
+      trajectoryTimer = setTimeout(() => {
+        trajectoryTimer = null;
+        updateDiurnalTrajectories();
+        updateCelestialState();
+      }, 60);
     }
 
-    [sliderLat, sliderSeason, sliderTime].forEach(attachSliderDragEffect);
-
-    // --- 1. Latitude Slider Events (-90 to +90) ---
     sliderLat.addEventListener('input', () => {
       state.lat = parseFloat(sliderLat.value);
-      updateDiurnalTrajectories();
+      scheduleTrajectoryUpdate();
+    });
+    sliderSeason.addEventListener('input', () => {
+      state.seasonDayOffset = parseInt(sliderSeason.value, 10);
+      scheduleTrajectoryUpdate();
+    });
+    sliderTime.addEventListener('input', () => {
+      state.timeHourOffset = parseFloat(sliderTime.value);
       updateCelestialState();
     });
 
     btnResetLat.addEventListener('click', () => {
-      state.lat = DEFAULT_LAT;
-      sliderLat.value = DEFAULT_LAT;
+      state.lat = 25.0330;
+      sliderLat.value = 25.0330;
       updateDiurnalTrajectories();
       updateCelestialState();
     });
-
-    // --- 2. Season Slider Events (-182.5 to +182.5 days = 1 year range) ---
-    sliderSeason.addEventListener('input', () => {
-      state.seasonOffsetDays = parseFloat(sliderSeason.value);
-      updateDiurnalTrajectories();
-      updateCelestialState();
-    });
-
     btnResetSeason.addEventListener('click', () => {
-      state.seasonOffsetDays = 0;
+      state.seasonDayOffset = 0;
       sliderSeason.value = 0;
       updateDiurnalTrajectories();
       updateCelestialState();
     });
-
-    // --- 3. Diurnal Slider Events (-12h to +12h) ---
-    sliderTime.addEventListener('input', () => {
-      state.diurnalOffsetHours = parseFloat(sliderTime.value);
-      updateCelestialState();
-    });
-
     btnResetTime.addEventListener('click', () => {
-      state.diurnalOffsetHours = 0;
+      state.timeHourOffset = 0;
       sliderTime.value = 0;
       updateCelestialState();
     });
 
-    // --- Layer Toggle Button Handlers ---
-    // Toggle Sun: body, path, seasons band, shadow
+    function setToggleStyle(btn, active) {
+      btn.className = active
+        ? 'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border-2 border-black text-xs font-bold transition bg-black text-white'
+        : 'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border-2 border-black/40 text-xs font-bold transition bg-white text-black/40';
+    }
+
     btnToggleSun.addEventListener('click', () => {
       state.visibleLayers.sun = !state.visibleLayers.sun;
-      if (state.visibleLayers.sun) {
-        btnToggleSun.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition bg-amber-500/20 border-amber-500/60 text-amber-500 shadow-sm";
-      } else {
-        btnToggleSun.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition bg-black/10 dark:bg-white/5 border-transparent opacity-40";
-      }
+      setToggleStyle(btnToggleSun, state.visibleLayers.sun);
       updateDiurnalTrajectories();
       updateCelestialState();
     });
-
-    // Toggle Moon: body, path, moon band
     btnToggleMoon.addEventListener('click', () => {
       state.visibleLayers.moon = !state.visibleLayers.moon;
-      if (state.visibleLayers.moon) {
-        btnToggleMoon.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition bg-blue-500/20 border-blue-500/60 text-blue-400 shadow-sm";
-      } else {
-        btnToggleMoon.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition bg-black/10 dark:bg-white/5 border-transparent opacity-40";
-      }
+      setToggleStyle(btnToggleMoon, state.visibleLayers.moon);
       updateDiurnalTrajectories();
       updateCelestialState();
     });
-
-    // Toggle Info Dashboard
     btnToggleInfo.addEventListener('click', () => {
       infoDashboard.classList.toggle('hidden');
-      if (infoDashboard.classList.contains('hidden')) {
-        btnToggleInfo.classList.remove('bg-amber-500/20', 'border-amber-500/60', 'text-amber-500');
-      } else {
-        btnToggleInfo.classList.add('bg-amber-500/20', 'border-amber-500/60', 'text-amber-500');
-      }
+      btnToggleInfo.classList.toggle('bg-black', !infoDashboard.classList.contains('hidden'));
+      btnToggleInfo.classList.toggle('text-white', !infoDashboard.classList.contains('hidden'));
     });
 
-    // Window Resize
     window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const w = window.innerWidth, h = window.innerHeight;
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(w, h);
+      EdgePostProcessor.resize(w, h, Math.min(window.devicePixelRatio, 2));
     });
 
-    // Periodic Background Sync (Advances base anchor second-by-second)
+    // Periodic time sync
     setInterval(() => {
       state.baseDate = new Date();
       updateCelestialState();
     }, 1000);
 
-    // Initial Startup
-    window.onload = function() {
+    // ========== Boot ==========
+    window.onload = () => {
       state.baseDate = new Date();
+      EdgePostProcessor.init(window.innerWidth, window.innerHeight, Math.min(window.devicePixelRatio, 2));
       updateDiurnalTrajectories();
       updateCelestialState();
-
-      // Launch Onboarding Tutorial on load
       TutorialGuide.init();
 
       function animate() {
         requestAnimationFrame(animate);
         controls.update();
-        updateNorthIndicatorHUD();
-        renderer.render(scene, camera);
+        if (state.cameraMoved) {
+          sunCorona.lookAt(camera.position);
+          updateNorthIndicatorHUD();
+          state.cameraMoved = false;
+        }
+        EdgePostProcessor.render();
       }
       animate();
     };
